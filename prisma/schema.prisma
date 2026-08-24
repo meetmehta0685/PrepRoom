@@ -97,6 +97,7 @@ enum ExperienceLevel {
 enum InterviewStatus {
   ACTIVE
   COMPLETED
+  ABANDONED
 }
 
 enum InterviewMessageRole {
@@ -104,33 +105,43 @@ enum InterviewMessageRole {
   CANDIDATE
 }
 
+enum InterviewQuestionType {
+  TEXT
+  CODE
+}
+
 model InterviewSession {
-  id              String             @id @default(cuid())
-  candidateId     String
-  candidate       User               @relation("CandidateInterviews", fields: [candidateId], references: [id], onDelete: Cascade)
-  interviewerType InterviewMode
-  track           InterviewTrack
-  level           ExperienceLevel
-  jobTitle        String             @default("Software Engineer")
-  status          InterviewStatus    @default(ACTIVE)
-  meetingId       String?            @unique
-  meeting         Meeting?           @relation(fields: [meetingId], references: [id], onDelete: SetNull)
-  messages        InterviewMessage[]
-  report          InterviewReport?
-  createdAt       DateTime           @default(now())
-  completedAt     DateTime?
+  id                String             @id @default(cuid())
+  candidateId       String
+  candidate         User               @relation("CandidateInterviews", fields: [candidateId], references: [id], onDelete: Cascade)
+  interviewerType   InterviewMode
+  track             InterviewTrack
+  level             ExperienceLevel
+  jobTitle          String             @default("Software Engineer")
+  resumeName        String?
+  resumeText        String?            @db.Text
+  resumeFingerprint String?
+  status            InterviewStatus    @default(ACTIVE)
+  meetingId         String?            @unique
+  meeting           Meeting?           @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  messages          InterviewMessage[]
+  report            InterviewReport?
+  createdAt         DateTime           @default(now())
+  completedAt       DateTime?
 
   @@index([candidateId, createdAt])
   @@map("interview_sessions")
 }
 
 model InterviewMessage {
-  id          String               @id @default(cuid())
-  interviewId String
-  interview   InterviewSession     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-  role        InterviewMessageRole
-  content     String               @db.Text
-  createdAt   DateTime             @default(now())
+  id           String                @id @default(cuid())
+  interviewId  String
+  interview    InterviewSession      @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  role         InterviewMessageRole
+  content      String                @db.Text
+  questionType InterviewQuestionType @default(TEXT)
+  codeLanguage String?
+  createdAt    DateTime              @default(now())
 
   @@index([interviewId, createdAt])
   @@map("interview_messages")

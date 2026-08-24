@@ -65,6 +65,14 @@ export const questionBank: Record<InterviewTrackValue, string[]> = {
   ],
 };
 
+export const codingQuestionBank: Record<Exclude<InterviewTrackValue, "BEHAVIORAL">, string> = {
+  FULLSTACK: "Implement `mergeNotifications(first, second)`. Each input is an array of `{ id: string, timestamp: number }` sorted newest first. Return one newest-first array with duplicate IDs removed. Example: `[{id: 'a', timestamp: 4}]` and `[{id: 'a', timestamp: 4}, {id: 'b', timestamp: 2}]` returns `[{id: 'a', timestamp: 4}, {id: 'b', timestamp: 2}]`. Analyze the complexity.",
+  FRONTEND: "Implement `debounce(fn, wait)` so it preserves `this`, forwards arguments, and exposes `cancel()`. Example: calling the wrapped function with `1`, then `2` within 50 ms for a 100 ms wait invokes `fn(2)` once. Calling `cancel()` before 100 ms invokes nothing.",
+  BACKEND: "Implement an `IdempotencyStore` class with `set(key, value, ttlMs)` and `get(key, now)`. `get` returns the value before expiry and `undefined` after expiry. Example: after `set('order-1', 'created', 1000)` at time 0, `get('order-1', 999)` returns `'created'` and `get('order-1', 1000)` returns `undefined`. Explain the multi-server changes.",
+  DSA: "Implement an `LRUCache` class with a capacity, `get(key)`, and `put(key, value)` in constant time. Example: capacity 2, `put(1, 1)`, `put(2, 2)`, `get(1)`, `put(3, 3)` must evict key 2. Explain time and space complexity.",
+  SYSTEM_DESIGN: "Implement `findServer(ring, keyHash)`, where `ring` is a sorted array of `{ hash: number, server: string }`. Return the first server whose hash is at least `keyHash`, wrapping to index 0. Example: ring hashes `[10, 30, 50]` maps key hash 31 to 50 and key hash 70 to 10. Define the empty-ring behavior.",
+};
+
 export function trackLabel(track: InterviewTrackValue) {
   return interviewTracks.find((item) => item.value === track)?.label ?? track;
 }

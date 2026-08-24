@@ -2,16 +2,24 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRightIcon, BotIcon, CheckIcon, MicIcon, MicOffIcon, RotateCcwIcon, Volume2Icon } from "lucide-react";
+import { ArrowRightIcon, BotIcon, CheckIcon, Code2Icon, MicIcon, MicOffIcon, RotateCcwIcon, Volume2Icon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { CodeEditor } from "@/components/code-editor";
+import { codeLanguageValues, type CodeLanguage, type QuestionType } from "@/lib/ai-interviewer";
 import { MAX_RECORDING_MS, selectRecordingMimeType } from "@/lib/audio-recording";
 import { levelLabel, trackLabel, type ExperienceLevelValue, type InterviewTrackValue } from "@/lib/interviews";
 import { cn } from "@/lib/utils";
 
-type InterviewMessage = { id: string; role: "INTERVIEWER" | "CANDIDATE"; content: string };
+type InterviewMessage = {
+  id: string;
+  role: "INTERVIEWER" | "CANDIDATE";
+  content: string;
+  questionType: QuestionType;
+  codeLanguage?: string | null;
+};
 type InterviewReport = {
   overallScore: number;
   technicalScore: number;
@@ -21,6 +29,10 @@ type InterviewReport = {
   improvements: string[];
   nextSteps: string[];
 };
+
+function resolveCodeLanguage(value?: string | null): CodeLanguage {
+  return value && codeLanguageValues.includes(value as CodeLanguage) ? value as CodeLanguage : "javascript";
+}
 
 export function AiInterviewRoom({ interview }: {
   interview: {
@@ -35,6 +47,10 @@ export function AiInterviewRoom({ interview }: {
   const [messages, setMessages] = useState(interview.messages);
   const [report, setReport] = useState(interview.report ?? undefined);
   const [answer, setAnswer] = useState("");
+  const [codeLanguage, setCodeLanguage] = useState<CodeLanguage>(() => {
+    const opening = [...interview.messages].reverse().find((message) => message.role === "INTERVIEWER");
+    return resolveCodeLanguage(opening?.codeLanguage);
+  });
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +63,7 @@ export function AiInterviewRoom({ interview }: {
 
   const questionsAnswered = messages.filter((message) => message.role === "CANDIDATE").length;
   const currentQuestion = useMemo(() => [...messages].reverse().find((message) => message.role === "INTERVIEWER"), [messages]);
+  const isCodingQuestion = currentQuestion?.questionType === "CODE";
 
   useEffect(() => {
     return () => {
@@ -151,40 +168,56 @@ export function AiInterviewRoom({ interview }: {
     setSubmitting(true);
     setError("");
     setFeedback("");
-    const response = await fetch(`/api/interviews/${interview.id}/answer`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answer: submittedAnswer }),
-    });
-    const result = (await response.json()) as {
-      completed?: boolean;
-      feedback?: string;
-      question?: InterviewMessage;
-      report?: InterviewReport;
-      provider?: "groq" | "practice";
-      error?: string;
-    };
-    setSubmitting(false);
+    try {
+      const response = await fetch(`/api/interviews/${interview.id}/answer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answer: submittedAnswer,
+          questionType: currentQuestion?.questionType ?? "TEXT",
+          codeLanguage: isCodingQuestion ? codeLanguage : null,
+        }),
+      });
+      const result = (await response.json()) as {
+        completed?: boolean;
+        feedback?: string;
+        question?: InterviewMessage;
+        report?: InterviewReport;
+        provider?: "groq" | "practice";
+        error?: string;
+      };
 
-    if (!response.ok) {
-      setError(result.error ?? "The interviewer could not respond.");
-      return;
-    }
+      if (!response.ok) {
+        setError(result.error ?? "The interviewer could not respond.");
+        return;
+      }
 
-    const candidateMessage: InterviewMessage = { id: crypto.randomUUID(), role: "CANDIDATE", content: submittedAnswer };
-    setMessages((current) => result.question ? [...current, candidateMessage, result.question] : [...current, candidateMessage]);
-    setAnswer("");
-    setPracticeFallback(result.provider === "practice");
-    if (result.completed && result.report) {
-      setReport(result.report);
-    } else {
-      setFeedback(result.feedback ?? "Answer saved.");
-      window.setTimeout(() => {
-        if (result.question && "speechSynthesis" in window) {
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(new SpeechSynthesisUtterance(result.question.content));
-        }
-      }, 250);
+      const candidateMessage: InterviewMessage = {
+        id: crypto.randomUUID(),
+        role: "CANDIDATE",
+        content: submittedAnswer,
+        questionType: currentQuestion?.questionType ?? "TEXT",
+        codeLanguage: isCodingQuestion ? codeLanguage : null,
+      };
+      setMessages((current) => result.question ? [...current, candidateMessage, result.question] : [...current, candidateMessage]);
+      setAnswer("");
+      if (result.question) setCodeLanguage(resolveCodeLanguage(result.question.codeLanguage));
+      setPracticeFallback(result.provider === "practice");
+      if (result.completed && result.report) {
+        setReport(result.report);
+      } else {
+        setFeedback(result.feedback ?? "Answer saved.");
+        window.setTimeout(() => {
+          if (result.question && "speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance(result.question.content));
+          }
+        }, 250);
+      }
+    } catch {
+      setError("The interviewer could not respond. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -193,7 +226,7 @@ export function AiInterviewRoom({ interview }: {
   }
 
   return (
-    <main className="min-h-screen bg-[oklch(0.14_0.035_264)] text-white">
+    <main className="min-h-screen overflow-x-hidden bg-[oklch(0.14_0.035_264)] text-white">
       <header className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-8">
         <div>
           <p className="text-sm font-semibold">{interview.jobTitle}</p>
@@ -201,18 +234,20 @@ export function AiInterviewRoom({ interview }: {
             {trackLabel(interview.track)} · {levelLabel(interview.level)}
           </p>
         </div>
-        <Badge className="border-white/10 bg-white/8 text-white">Question {Math.min(questionsAnswered + 1, 5)} of 5</Badge>
+        <div className="flex items-center gap-2">
+          {isCodingQuestion ? <Badge className="border-white/10 bg-white/8 text-white"><Code2Icon data-icon="inline-start" />Coding question</Badge> : null}
+          <Badge className="border-white/10 bg-white/8 text-white">Question {Math.min(questionsAnswered + 1, 5)} of 5</Badge>
+        </div>
       </header>
 
-      <div className="mx-auto grid min-h-[calc(100vh-73px)] w-full max-w-7xl lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="relative flex min-h-[430px] flex-col items-center justify-center overflow-hidden border-b border-white/10 px-6 py-14 text-center lg:border-b-0 lg:border-r">
+      <div className="mx-auto grid min-h-[calc(100vh-73px)] w-full min-w-0 max-w-7xl lg:grid-cols-[0.9fr_1.1fr]">
+        <section className="relative flex min-h-[430px] min-w-0 flex-col items-center justify-center overflow-hidden border-b border-white/10 px-6 py-14 text-center lg:border-b-0 lg:border-r">
           <div className="absolute size-[28rem] rounded-full bg-primary/20 blur-3xl" />
           <div className="relative flex size-28 items-center justify-center rounded-full border border-white/15 bg-white/8 shadow-2xl shadow-primary/30 backdrop-blur-xl">
             <BotIcon className="size-10 text-[oklch(0.82_0.13_65)]" />
             <span className="absolute inset-[-10px] rounded-full border border-[oklch(0.82_0.13_65)]/30" />
           </div>
-          <p className="relative mt-6 font-mono text-xs uppercase tracking-[0.2em] text-white/45">AI interviewer</p>
-          <div className="relative mt-6 flex h-8 items-center gap-1" aria-hidden="true">
+          <div className="relative mt-8 flex h-8 items-center gap-1" aria-hidden="true">
             {Array.from({ length: 22 }, (_, index) => (
               <span key={index} className="w-1 rounded-full bg-[oklch(0.82_0.13_65)]" style={{ height: `${8 + ((index * 11) % 24)}px`, opacity: 0.35 + ((index * 5) % 6) / 10 }} />
             ))}
@@ -226,12 +261,11 @@ export function AiInterviewRoom({ interview }: {
           </Button>
         </section>
 
-        <section className="flex flex-col bg-background text-foreground">
-          <div className="flex-1 px-6 py-8 sm:px-10 sm:py-10">
+        <section className="flex min-w-0 flex-col bg-background text-foreground">
+          <div className="min-w-0 flex-1 px-6 py-8 sm:px-10 sm:py-10">
             <div className="mb-7 flex items-end justify-between gap-4">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.18em] text-primary">Your answer</p>
-                <h1 className="mt-2 font-display text-3xl font-medium tracking-[-0.03em]">Think out loud.</h1>
+                <h1 className="font-display text-3xl font-medium tracking-[-0.03em]">{isCodingQuestion ? "Write working code." : "Think out loud."}</h1>
               </div>
               <span className="text-xs text-muted-foreground">{answer.trim() ? answer.trim().split(/\s+/).length : 0} words</span>
             </div>
@@ -244,14 +278,24 @@ export function AiInterviewRoom({ interview }: {
               </Alert>
             ) : null}
 
-            <textarea
-              value={answer}
-              onChange={(event) => setAnswer(event.target.value)}
-              placeholder="Explain your assumptions, approach, trade-offs, and how you would verify the result..."
-              className="min-h-[260px] w-full resize-y rounded-2xl border bg-card p-5 text-sm leading-7 shadow-sm outline-none transition-shadow placeholder:text-muted-foreground/65 focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-[330px]"
-              maxLength={6000}
-              disabled={submitting}
-            />
+            {isCodingQuestion ? (
+              <CodeEditor
+                value={answer}
+                language={codeLanguage}
+                onChange={setAnswer}
+                onLanguageChange={setCodeLanguage}
+                disabled={submitting}
+              />
+            ) : (
+              <textarea
+                value={answer}
+                onChange={(event) => setAnswer(event.target.value)}
+                placeholder="Explain your assumptions, approach, trade-offs, and how you would verify the result..."
+                className="min-h-[260px] w-full resize-y rounded-2xl border bg-card p-5 text-sm leading-7 shadow-sm outline-none transition-shadow placeholder:text-muted-foreground/65 focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-[330px]"
+                maxLength={6000}
+                disabled={submitting}
+              />
+            )}
 
             {recording ? <p className="mt-3 text-sm font-medium text-destructive"><span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-destructive" />Recording. Speak normally, then stop when you are done.</p> : null}
             {transcribing ? <p className="mt-3 text-sm text-muted-foreground">Transcribing your answer...</p> : null}
@@ -259,10 +303,14 @@ export function AiInterviewRoom({ interview }: {
           </div>
           <div className="border-t bg-card px-6 py-4 sm:px-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button variant={recording ? "destructive" : "outline"} onClick={toggleRecording} disabled={submitting || transcribing}>
-                {recording ? <MicOffIcon data-icon="inline-start" /> : <MicIcon data-icon="inline-start" />}
-                {recording ? "Stop and transcribe" : transcribing ? "Transcribing answer" : "Answer with voice"}
-              </Button>
+              {isCodingQuestion ? (
+                <p className="text-xs leading-5 text-muted-foreground">Code runs only through AI review in this version. An isolated execution runner comes next.</p>
+              ) : (
+                <Button variant={recording ? "destructive" : "outline"} onClick={toggleRecording} disabled={submitting || transcribing}>
+                  {recording ? <MicOffIcon data-icon="inline-start" /> : <MicIcon data-icon="inline-start" />}
+                  {recording ? "Stop and transcribe" : transcribing ? "Transcribing answer" : "Answer with voice"}
+                </Button>
+              )}
               <Button size="lg" onClick={submitAnswer} disabled={submitting || recording || transcribing || answer.trim().length < 2}>
                 {submitting ? (questionsAnswered === 4 ? "Preparing report" : "Preparing next question") : questionsAnswered === 4 ? "Finish interview" : "Submit answer"}
                 {!submitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
@@ -281,8 +329,7 @@ function InterviewReportView({ report, track, jobTitle, practiceFallback }: { re
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-col gap-5 border-b pb-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary">Interview report</p>
-            <h1 className="mt-3 font-display text-4xl font-medium tracking-[-0.04em] sm:text-5xl">{jobTitle}</h1>
+            <h1 className="font-display text-4xl font-medium tracking-[-0.04em] sm:text-5xl">Interview report for {jobTitle}</h1>
             <p className="mt-3 text-muted-foreground">{trackLabel(track)} interview completed</p>
           </div>
           <div className="flex items-baseline gap-2">

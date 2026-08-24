@@ -36,3 +36,25 @@ test("creates a bounded practice report when no AI key is configured", async () 
   assert.ok(result.report.strengths.length > 0);
   assert.ok(result.report.nextSteps.length > 0);
 });
+
+test("adds a coding question before a technical interview ends", async () => {
+  const result = await createNextQuestion({
+    track: "FRONTEND",
+    level: "MID",
+    jobTitle: "Frontend Engineer",
+    answerCount: 3,
+    turns: [
+      { role: "INTERVIEWER", content: "Tell me about your frontend work.", questionType: "TEXT" },
+      { role: "CANDIDATE", content: "I built a React design system.", questionType: "TEXT" },
+      { role: "INTERVIEWER", content: "How did you test it?", questionType: "TEXT" },
+      { role: "CANDIDATE", content: "With component and browser tests.", questionType: "TEXT" },
+      { role: "INTERVIEWER", content: "How did you handle accessibility?", questionType: "TEXT" },
+      { role: "CANDIDATE", content: "With keyboard and screen-reader checks.", questionType: "TEXT" },
+    ],
+  });
+
+  assert.equal(result.questionType, "CODE");
+  assert.equal(result.codeLanguage, "javascript");
+  assert.match(result.question, /example/i);
+  assert.match(result.question, /(class|function|input|output)/i);
+});

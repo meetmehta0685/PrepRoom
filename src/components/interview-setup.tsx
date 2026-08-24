@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightIcon, BotIcon, UsersIcon } from "lucide-react";
+import { ArrowRightIcon, BotIcon, FileTextIcon, UsersIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -17,34 +17,45 @@ export function InterviewSetup() {
   const [track, setTrack] = useState<InterviewTrackValue>("FULLSTACK");
   const [level, setLevel] = useState<ExperienceLevelValue>("ENTRY");
   const [jobTitle, setJobTitle] = useState("Software Engineer");
+  const [resume, setResume] = useState<File | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
 
   async function startInterview() {
-    setStarting(true);
-    setError("");
-    const response = await fetch("/api/interviews", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ interviewerType, track, level, jobTitle }),
-    });
-    const result = (await response.json()) as { destination?: string; error?: string };
-    setStarting(false);
-
-    if (!response.ok || !result.destination) {
-      setError(result.error ?? "The interview could not be started.");
+    if (interviewerType === "AI" && !resume) {
+      setError("Upload your resume PDF to start the AI interview.");
       return;
     }
 
-    router.push(result.destination);
+    setStarting(true);
+    setError("");
+    const form = new FormData();
+    form.append("interviewerType", interviewerType);
+    form.append("track", track);
+    form.append("level", level);
+    form.append("jobTitle", jobTitle);
+    if (interviewerType === "AI" && resume) form.append("resume", resume);
+
+    try {
+      const response = await fetch("/api/interviews", { method: "POST", body: form });
+      const result = (await response.json()) as { destination?: string; error?: string };
+      if (!response.ok || !result.destination) {
+        setError(result.error ?? "The interview could not be started.");
+        return;
+      }
+      router.push(result.destination);
+    } catch {
+      setError("The interview could not be started. Check your connection and try again.");
+    } finally {
+      setStarting(false);
+    }
   }
 
   return (
     <div className="grid overflow-hidden rounded-3xl border bg-card shadow-2xl shadow-primary/8 lg:grid-cols-[0.78fr_1.22fr]">
       <aside className="relative overflow-hidden bg-[oklch(0.18_0.045_264)] px-6 py-8 text-white sm:px-9 sm:py-10">
         <div className="absolute -right-24 top-28 size-64 rounded-full bg-primary/35 blur-3xl" />
-        <p className="relative font-mono text-xs uppercase tracking-[0.2em] text-white/55">Interview room</p>
-        <h1 className="relative mt-4 max-w-sm font-display text-4xl font-medium leading-[1.02] tracking-[-0.035em] sm:text-5xl">
+        <h1 className="relative max-w-sm font-display text-4xl font-medium leading-[1.02] tracking-[-0.035em] sm:text-5xl">
           Choose who sits across from you.
         </h1>
         <p className="relative mt-5 max-w-sm text-sm leading-6 text-white/65">
@@ -81,7 +92,7 @@ export function InterviewSetup() {
                 selected={interviewerType === "AI"}
                 icon={<BotIcon />}
                 title="Practice with AI"
-                description="Five adaptive questions and a feedback report"
+                description="Resume-guided questions, a coding round, and feedback"
                 onClick={() => setInterviewerType("AI")}
               />
               <ModeButton
@@ -133,13 +144,40 @@ export function InterviewSetup() {
             </Field>
           </div>
 
+          {interviewerType === "AI" ? (
+            <Field data-invalid={Boolean(error && !resume)}>
+              <FieldLabel htmlFor="resume">Resume PDF</FieldLabel>
+              <div className="rounded-2xl border bg-background p-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+                    <FileTextIcon className="size-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Input
+                      id="resume"
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      required
+                      aria-invalid={Boolean(error && !resume)}
+                      onChange={(event) => setResume(event.target.files?.[0] ?? null)}
+                    />
+                    <FieldDescription className="mt-2">
+                      The AI reads this PDF to ask about your projects and experience. The original file is not retained. Maximum 3 MB.
+                    </FieldDescription>
+                    {resume ? <p className="mt-2 truncate text-xs font-medium text-foreground">Selected: {resume.name}</p> : null}
+                  </div>
+                </div>
+              </div>
+            </Field>
+          ) : null}
+
           {error ? <FieldDescription className="text-destructive">{error}</FieldDescription> : null}
 
           <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs leading-5 text-muted-foreground">
-              {interviewerType === "AI" ? "Voice works in supported browsers. Typing always works." : "Your peer joins as the interviewer from the shared code."}
+              {interviewerType === "AI" ? "If AI is temporarily unavailable, the interview continues with curated practice questions." : "Your peer joins as the interviewer from the shared code."}
             </p>
-            <Button size="lg" className="h-11 shrink-0" onClick={startInterview} disabled={starting || jobTitle.trim().length < 2}>
+            <Button size="lg" className="h-11 shrink-0" onClick={startInterview} disabled={starting || jobTitle.trim().length < 2 || (interviewerType === "AI" && !resume)}>
               {starting ? "Preparing interview" : interviewerType === "AI" ? "Start AI interview" : "Create peer interview"}
               {!starting ? <ArrowRightIcon data-icon="inline-end" /> : null}
             </Button>

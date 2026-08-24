@@ -24,7 +24,13 @@ export default async function InterviewPage({ params }: { params: Promise<{ id: 
         track: interview.track as InterviewTrackValue,
         level: interview.level as ExperienceLevelValue,
         jobTitle: interview.jobTitle,
-        messages: interview.messages.map((message) => ({ id: message.id, role: message.role, content: message.content })),
+        messages: interview.messages.map((message) => ({
+          id: message.id,
+          role: message.role,
+          content: message.content,
+          questionType: message.questionType,
+          codeLanguage: message.codeLanguage,
+        })),
         report: interview.report,
       }}
     />
