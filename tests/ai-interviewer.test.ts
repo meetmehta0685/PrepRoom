@@ -21,13 +21,14 @@ test("uses the next curated question when no AI key is configured", async () => 
 });
 
 test("creates a bounded practice report when no AI key is configured", async () => {
+  const candidateAnswer = "I would use short-lived sessions, secure cookies, CSRF protection, and server-side authorization checks.";
   const result = await createInterviewReport({
     track: "FULLSTACK",
     level: "ENTRY",
     jobTitle: "Software Engineer",
     turns: [
       { role: "INTERVIEWER", content: "How would you design authentication?" },
-      { role: "CANDIDATE", content: "I would use short-lived sessions, secure cookies, CSRF protection, and server-side authorization checks." },
+      { role: "CANDIDATE", content: candidateAnswer },
     ],
   });
 
@@ -35,6 +36,11 @@ test("creates a bounded practice report when no AI key is configured", async () 
   assert.ok(result.report.overallScore >= 0 && result.report.overallScore <= 100);
   assert.ok(result.report.strengths.length > 0);
   assert.ok(result.report.nextSteps.length > 0);
+  assert.equal(result.report.questionReviews.length, 1);
+  assert.equal(result.report.questionReviews[0].candidateAnswer, candidateAnswer);
+  assert.equal(result.report.questionReviews[0].question, "How would you design authentication?");
+  assert.ok(result.report.questionReviews[0].benchmarkAnswer.length > 80);
+  assert.ok(result.report.questionReviews[0].betterApproach.length > 40);
 });
 
 test("adds a coding question before a technical interview ends", async () => {

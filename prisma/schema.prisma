@@ -148,17 +148,42 @@ model InterviewMessage {
 }
 
 model InterviewReport {
-  id                 String           @id @default(cuid())
-  interviewId        String           @unique
-  interview          InterviewSession @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-  overallScore       Int
-  technicalScore     Int
-  communicationScore Int
-  summary            String           @db.Text
-  strengths          String[]
-  improvements       String[]
-  nextSteps          String[]
-  createdAt          DateTime         @default(now())
+  id                  String                    @id @default(cuid())
+  interviewId         String                    @unique
+  interview           InterviewSession          @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  overallScore        Int
+  technicalScore      Int
+  communicationScore  Int
+  problemSolvingScore Int                       @default(0)
+  roleFitScore        Int                       @default(0)
+  resumeDepthScore    Int                       @default(0)
+  isBaseline          Boolean                   @default(false)
+  summary             String                    @db.Text
+  hiringSignal        String                    @default("More evidence needed") @db.Text
+  strengths           String[]
+  improvements        String[]
+  nextSteps           String[]
+  questionReviews     InterviewQuestionReview[]
+  createdAt           DateTime                  @default(now())
 
   @@map("interview_reports")
+}
+
+model InterviewQuestionReview {
+  id              String                @id @default(cuid())
+  reportId        String
+  report          InterviewReport       @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  questionNumber  Int
+  question        String                @db.Text
+  candidateAnswer String                @db.Text
+  benchmarkAnswer String                @db.Text
+  score           Int
+  strengths       String[]
+  gaps            String[]
+  betterApproach  String                @db.Text
+  questionType    InterviewQuestionType @default(TEXT)
+  codeLanguage    String?
+
+  @@unique([reportId, questionNumber])
+  @@map("interview_question_reviews")
 }

@@ -12,7 +12,10 @@ export default async function InterviewPage({ params }: { params: Promise<{ id: 
 
   const interview = await prisma.interviewSession.findUnique({
     where: { id },
-    include: { messages: { orderBy: { createdAt: "asc" } }, report: true },
+    include: {
+      messages: { orderBy: { createdAt: "asc" } },
+      report: { include: { questionReviews: { orderBy: { questionNumber: "asc" } } } },
+    },
   });
 
   if (!interview || interview.candidateId !== session.user.id || interview.interviewerType !== "AI") notFound();

@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRightIcon, BotIcon, CheckIcon, Code2Icon, MicIcon, MicOffIcon, RotateCcwIcon, Volume2Icon } from "lucide-react";
+import { ArrowRightIcon, BotIcon, CheckIcon, Code2Icon, DownloadIcon, LightbulbIcon, MicIcon, MicOffIcon, MinusCircleIcon, RotateCcwIcon, Volume2Icon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { CodeEditor } from "@/components/code-editor";
 import { codeLanguageValues, type CodeLanguage, type QuestionType } from "@/lib/ai-interviewer";
 import { MAX_RECORDING_MS, selectRecordingMimeType } from "@/lib/audio-recording";
@@ -24,10 +25,27 @@ type InterviewReport = {
   overallScore: number;
   technicalScore: number;
   communicationScore: number;
+  problemSolvingScore: number;
+  roleFitScore: number;
+  resumeDepthScore: number;
+  isBaseline?: boolean;
   summary: string;
+  hiringSignal: string;
   strengths: string[];
   improvements: string[];
   nextSteps: string[];
+  questionReviews: Array<{
+    questionNumber: number;
+    question: string;
+    candidateAnswer: string;
+    benchmarkAnswer: string;
+    score: number;
+    strengths: string[];
+    gaps: string[];
+    betterApproach: string;
+    questionType: QuestionType;
+    codeLanguage?: string | null;
+  }>;
 };
 
 function resolveCodeLanguage(value?: string | null): CodeLanguage {
@@ -56,7 +74,7 @@ export function AiInterviewRoom({ interview }: {
   const [submitting, setSubmitting] = useState(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
-  const [practiceFallback, setPracticeFallback] = useState(false);
+  const [practiceFallback, setPracticeFallback] = useState(interview.report?.isBaseline ?? false);
   const recorderRef = useRef<MediaRecorder | undefined>(undefined);
   const streamRef = useRef<MediaStream | undefined>(undefined);
   const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -222,7 +240,7 @@ export function AiInterviewRoom({ interview }: {
   }
 
   if (report) {
-    return <InterviewReportView report={report} track={interview.track} jobTitle={interview.jobTitle} practiceFallback={practiceFallback} />;
+    return <InterviewReportView interviewId={interview.id} report={report} track={interview.track} jobTitle={interview.jobTitle} practiceFallback={practiceFallback} />;
   }
 
   return (
@@ -323,45 +341,119 @@ export function AiInterviewRoom({ interview }: {
   );
 }
 
-function InterviewReportView({ report, track, jobTitle, practiceFallback }: { report: InterviewReport; track: InterviewTrackValue; jobTitle: string; practiceFallback: boolean }) {
+function InterviewReportView({ interviewId, report, track, jobTitle, practiceFallback }: { interviewId: string; report: InterviewReport; track: InterviewTrackValue; jobTitle: string; practiceFallback: boolean }) {
+  const hasDetailedReviews = report.questionReviews?.length > 0;
   return (
-    <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">
-      <div className="mx-auto max-w-5xl">
-        <div className="flex flex-col gap-5 border-b pb-8 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="font-display text-4xl font-medium tracking-[-0.04em] sm:text-5xl">Interview report for {jobTitle}</h1>
-            <p className="mt-3 text-muted-foreground">{trackLabel(track)} interview completed</p>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-display text-7xl font-medium tracking-[-0.06em] text-primary">{report.overallScore}</span>
-            <span className="font-mono text-xs text-muted-foreground">/ 100</span>
-          </div>
-        </div>
-
-        {practiceFallback ? (
-          <Alert className="mt-6 border-[oklch(0.78_0.13_65)]/40 bg-[oklch(0.95_0.04_75)]">
-            <BotIcon />
-            <AlertTitle>Practice scoring</AlertTitle>
-            <AlertDescription>Connect the free Groq model to replace this baseline report with answer-specific AI feedback.</AlertDescription>
-          </Alert>
-        ) : null}
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Score label="Technical" value={report.technicalScore} />
-          <Score label="Communication" value={report.communicationScore} />
-        </div>
-
-        <section className="mt-8 rounded-3xl border bg-card p-6 sm:p-8">
-          <h2 className="font-display text-2xl font-medium">Assessment</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">{report.summary}</p>
-          <div className="mt-8 grid gap-8 md:grid-cols-3">
-            <ReportList title="What worked" items={report.strengths} />
-            <ReportList title="Improve next" items={report.improvements} />
-            <ReportList title="Practice plan" items={report.nextSteps} />
+    <main className="min-h-screen bg-[oklch(0.975_0.008_260)] px-5 py-8 sm:px-8 sm:py-12">
+      <div className="mx-auto max-w-6xl">
+        <section className="overflow-hidden rounded-3xl bg-[oklch(0.14_0.035_264)] px-6 py-8 text-white shadow-[0_18px_50px_-28px_oklch(0.14_0.035_264/0.8)] sm:px-10 sm:py-10">
+          <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="max-w-3xl text-balance font-display text-4xl font-medium tracking-[-0.04em] sm:text-5xl">Interview report for {jobTitle}</h1>
+              <p className="mt-3 text-white/60">{trackLabel(track)} interview completed · {hasDetailedReviews ? `${report.questionReviews.length} answers reviewed` : "Summary report"}</p>
+            </div>
+            <div className="shrink-0">
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-7xl font-medium tracking-[-0.04em] text-[oklch(0.82_0.13_65)] tabular-nums">{report.overallScore}</span>
+                <span className="font-mono text-xs text-white/45">/ 100</span>
+              </div>
+              <p className="mt-1 text-sm text-white/60">Overall interview score</p>
+            </div>
           </div>
         </section>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        {practiceFallback ? (
+          <Alert className="mt-6">
+            <BotIcon />
+            <AlertTitle>Practice scoring</AlertTitle>
+            <AlertDescription>AI scoring was unavailable, so this report uses PrepRoom&apos;s baseline rubric.</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Score label="Technical" value={report.technicalScore} />
+          <Score label="Communication" value={report.communicationScore} />
+          <Score label="Problem solving" value={report.problemSolvingScore ?? 0} />
+          <Score label="Role fit" value={report.roleFitScore ?? 0} />
+          <Score label="Resume depth" value={report.resumeDepthScore ?? 0} />
+        </div>
+
+        <section className="mt-8 rounded-3xl bg-card p-6 shadow-[0_12px_36px_-28px_oklch(0.14_0.035_264/0.5)] sm:p-8">
+          <h2 className="font-display text-2xl font-medium">Assessment</h2>
+          <p className="mt-3 max-w-4xl text-base leading-7 text-muted-foreground">{report.summary}</p>
+          <div className="mt-6 rounded-2xl bg-muted/60 p-5">
+            <h3 className="text-sm font-semibold">Hiring signal</h3>
+            <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">{report.hiringSignal ?? "More evidence is needed before making a hiring recommendation."}</p>
+          </div>
+          <div className="mt-8 grid gap-8 md:grid-cols-3">
+            <ReportList title="What worked" items={report.strengths} tone="positive" />
+            <ReportList title="Improve next" items={report.improvements} tone="improve" />
+            <ReportList title="Practice plan" items={report.nextSteps} tone="improve" />
+          </div>
+          <details className="mt-8 rounded-2xl border px-5 py-4 text-sm">
+            <summary className="cursor-pointer font-semibold">How scoring works</summary>
+            <p className="mt-3 max-w-4xl leading-6 text-muted-foreground">Technical measures correctness and engineering depth. Communication measures clarity and structure. Problem solving measures assumptions, alternatives, and verification. Role fit measures evidence relevant to the target role. Resume depth measures ownership and detail when discussing listed experience. Scores below 60 need development, 60–74 show a developing foundation, 75–89 are strong, and 90+ are exceptional.</p>
+          </details>
+        </section>
+
+        {hasDetailedReviews ? (
+          <section className="mt-12">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="font-display text-3xl font-medium tracking-[-0.03em]">Your answers, reviewed</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Compare exactly what you submitted with a strong reference answer. The benchmark is guidance, not the only valid response.</p>
+              </div>
+              <a href={`/api/interviews/${interviewId}/report`} className={cn(buttonVariants({ size: "lg" }), "shrink-0")}>
+                <DownloadIcon data-icon="inline-start" />
+                Download detailed PDF
+              </a>
+            </div>
+
+            <div className="mt-7 flex flex-col gap-6">
+              {report.questionReviews.map((review) => (
+                <article key={review.questionNumber} className="overflow-hidden rounded-3xl bg-card shadow-[0_12px_36px_-28px_oklch(0.14_0.035_264/0.5)]">
+                  <header className="flex flex-col gap-4 bg-muted/55 px-6 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-8">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary">Question {review.questionNumber}</Badge>
+                        {review.questionType === "CODE" ? <Badge variant="outline"><Code2Icon data-icon="inline-start" />{review.codeLanguage ?? "Code"}</Badge> : null}
+                      </div>
+                      <h3 className="mt-4 max-w-4xl text-pretty font-display text-xl font-medium leading-snug sm:text-2xl">{review.question}</h3>
+                    </div>
+                    <div className="shrink-0 text-start sm:text-end">
+                      <span className="font-display text-3xl font-medium tabular-nums">{review.score}</span>
+                      <span className="text-xs text-muted-foreground">/100</span>
+                      <p className="text-xs text-muted-foreground">Answer score</p>
+                    </div>
+                  </header>
+
+                  <div className="px-6 py-7 sm:px-8 sm:py-8">
+                    <div className="grid min-w-0 gap-8 lg:grid-cols-2">
+                      <ReportAnswer title="Your answer" content={review.candidateAnswer} code={review.questionType === "CODE"} />
+                      <ReportAnswer title="Benchmark answer" content={review.benchmarkAnswer} />
+                    </div>
+                    <Separator className="my-8" />
+                    <div className="grid gap-8 md:grid-cols-2">
+                      <ReportList title="What worked" items={review.strengths} tone="positive" headingLevel={4} />
+                      <ReportList title="What was missing" items={review.gaps} tone="gap" headingLevel={4} />
+                    </div>
+                    <div className="mt-8 rounded-2xl bg-primary/6 p-5">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold"><LightbulbIcon className="text-primary" />A stronger approach</h4>
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground">{review.betterApproach}</p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <Alert className="mt-8">
+            <AlertTitle>Detailed review unavailable</AlertTitle>
+            <AlertDescription>This report was created before question-by-question reviews were added. Complete a new interview to receive the expanded report and PDF.</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="mt-10 flex flex-wrap gap-3 pb-6">
           <Link href="/interview/new" className={cn(buttonVariants({ size: "lg" }))}>
             <RotateCcwIcon data-icon="inline-start" />
             Start another interview
@@ -374,21 +466,36 @@ function InterviewReportView({ report, track, jobTitle, practiceFallback }: { re
 }
 
 function Score({ label, value }: { label: string; value: number }) {
+  const band = value >= 90 ? "Exceptional" : value >= 75 ? "Strong" : value >= 60 ? "Developing" : "Needs development";
   return (
-    <div className="rounded-2xl border bg-card p-5">
+    <div className="rounded-2xl bg-card p-5 shadow-[0_10px_30px_-28px_oklch(0.14_0.035_264/0.55)]">
       <div className="flex items-center justify-between text-sm"><span className="font-semibold">{label}</span><span className="font-mono text-xs text-muted-foreground">{value}/100</span></div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} /></div>
+      <p className="mt-3 text-xs text-muted-foreground">{band}</p>
     </div>
   );
 }
 
-function ReportList({ title, items }: { title: string; items: string[] }) {
+function ReportList({ title, items, tone = "positive", headingLevel = 3 }: { title: string; items: string[]; tone?: "positive" | "gap" | "improve"; headingLevel?: 3 | 4 }) {
+  const Heading = headingLevel === 4 ? "h4" : "h3";
+  const Icon = tone === "positive" ? CheckIcon : tone === "gap" ? MinusCircleIcon : ArrowRightIcon;
   return (
     <div>
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <ul className="mt-3 space-y-3 text-sm leading-6 text-muted-foreground">
-        {items.map((item) => <li key={item} className="border-l-2 border-primary/30 pl-3">{item}</li>)}
+      <Heading className="text-sm font-semibold">{title}</Heading>
+      <ul className="mt-3 flex flex-col gap-3 text-sm leading-6 text-muted-foreground">
+        {items.map((item) => <li key={item} className="flex gap-2"><Icon className="mt-1 size-4 shrink-0 text-primary" aria-hidden="true" /><span className="break-words">{item}</span></li>)}
       </ul>
+    </div>
+  );
+}
+
+function ReportAnswer({ title, content, code = false }: { title: string; content: string; code?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <h4 className="text-sm font-semibold">{title}</h4>
+      <div aria-label={`${title} content`} tabIndex={0} className={cn("mt-3 whitespace-pre-wrap break-words rounded-2xl bg-muted/55 p-5 text-sm leading-7 text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:max-h-[28rem] lg:overflow-auto", code && "font-mono text-xs leading-6 text-foreground")}>
+        {content}
+      </div>
     </div>
   );
 }

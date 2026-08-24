@@ -69,8 +69,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         resumeText: interview.resumeText,
       });
       const report = await prisma.$transaction(async (transaction) => {
+        const { questionReviews, ...reportData } = generated.report;
         const created = await transaction.interviewReport.create({
-          data: { interviewId: id, ...generated.report },
+          data: {
+            interviewId: id,
+            ...reportData,
+            isBaseline: generated.provider === "practice",
+            questionReviews: { create: questionReviews },
+          },
+          include: { questionReviews: { orderBy: { questionNumber: "asc" } } },
         });
         await transaction.interviewSession.update({
           where: { id },
