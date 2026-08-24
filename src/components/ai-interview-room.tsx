@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRightIcon, BotIcon, CheckIcon, MicIcon, MicOffIcon, RotateCcwIcon, Volume2Icon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { MAX_RECORDING_MS, selectRecordingMimeType } from "@/lib/audio-recording";
 import { levelLabel, trackLabel, type ExperienceLevelValue, type InterviewTrackValue } from "@/lib/interviews";
 import { cn } from "@/lib/utils";
 
@@ -20,27 +21,6 @@ type InterviewReport = {
   improvements: string[];
   nextSteps: string[];
 };
-
-type RecognitionResult = { 0: { transcript: string }; isFinal: boolean };
-type RecognitionEvent = { results: ArrayLike<RecognitionResult> };
-type RecognitionInstance = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: RecognitionEvent) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start(): void;
-  stop(): void;
-};
-type RecognitionConstructor = new () => RecognitionInstance;
-
-declare global {
-  interface Window {
-    SpeechRecognition?: RecognitionConstructor;
-    webkitSpeechRecognition?: RecognitionConstructor;
-  }
-}
 
 export function AiInterviewRoom({ interview }: {
   interview: {
@@ -58,12 +38,23 @@ export function AiInterviewRoom({ interview }: {
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [listening, setListening] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [practiceFallback, setPracticeFallback] = useState(false);
-  const recognitionRef = useRef<RecognitionInstance | undefined>(undefined);
+  const recorderRef = useRef<MediaRecorder | undefined>(undefined);
+  const streamRef = useRef<MediaStream | undefined>(undefined);
+  const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const questionsAnswered = messages.filter((message) => message.role === "CANDIDATE").length;
   const currentQuestion = useMemo(() => [...messages].reverse().find((message) => message.role === "INTERVIEWER"), [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+      if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   function speakQuestion() {
     if (!currentQuestion || !("speechSynthesis" in window)) return;
@@ -74,43 +65,89 @@ export function AiInterviewRoom({ interview }: {
     window.speechSynthesis.speak(utterance);
   }
 
-  function toggleListening() {
-    if (listening) {
-      recognitionRef.current?.stop();
+  function stopRecording() {
+    if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+    if (recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
+    }
+    setRecording(false);
+  }
+
+  async function toggleRecording() {
+    if (recording) {
+      stopRecording();
       return;
     }
 
-    const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!Recognition) {
-      setError("Voice input is not supported in this browser. Type your answer instead.");
+    if (!navigator.mediaDevices?.getUserMedia || !("MediaRecorder" in window)) {
+      setError("Audio recording is not supported in this browser. Type your answer instead.");
       return;
     }
 
     setError("");
-    const recognition = new Recognition();
-    const existingAnswer = answer.trim();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-    recognition.onresult = (event) => {
-      const spoken = Array.from(event.results).map((result) => result[0].transcript).join(" ");
-      setAnswer([existingAnswer, spoken].filter(Boolean).join(" "));
-    };
-    recognition.onerror = () => {
-      setError("Voice input stopped. You can continue by typing.");
-      setListening(false);
-    };
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
+    window.speechSynthesis?.cancel();
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = selectRecordingMimeType((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = new MediaRecorder(stream, {
+        ...(mimeType ? { mimeType } : {}),
+        audioBitsPerSecond: 64_000,
+      });
+      const chunks: Blob[] = [];
+      streamRef.current = stream;
+      recorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data);
+      };
+      recorder.onerror = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        setRecording(false);
+        setError("The microphone stopped recording. Try again or type your answer.");
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = undefined;
+        setRecording(false);
+        const audio = new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" });
+        if (audio.size === 0) {
+          setError("No audio was captured. Check the microphone and try again.");
+          return;
+        }
+
+        setTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("interviewId", interview.id);
+          form.append("audio", audio, "answer.webm");
+          const response = await fetch("/api/interviews/transcribe", { method: "POST", body: form });
+          const result = (await response.json()) as { text?: string; error?: string };
+          if (!response.ok || !result.text) {
+            setError(result.error ?? "The recording could not be transcribed. Try again or type your answer.");
+            return;
+          }
+          setAnswer((current) => [current.trim(), result.text].filter(Boolean).join(" "));
+          setError("");
+        } catch {
+          setError("The recording could not be uploaded. Check your connection and try again.");
+        } finally {
+          setTranscribing(false);
+        }
+      };
+
+      recorder.start(1_000);
+      setRecording(true);
+      recordingTimerRef.current = setTimeout(stopRecording, MAX_RECORDING_MS);
+    } catch {
+      setError("Microphone access is blocked. Allow microphone access or type your answer.");
+    }
   }
 
   async function submitAnswer() {
     const submittedAnswer = answer.trim();
     if (submittedAnswer.length < 2) return;
 
-    recognitionRef.current?.stop();
     setSubmitting(true);
     setError("");
     setFeedback("");
@@ -216,15 +253,17 @@ export function AiInterviewRoom({ interview }: {
               disabled={submitting}
             />
 
+            {recording ? <p className="mt-3 text-sm font-medium text-destructive"><span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-destructive" />Recording. Speak normally, then stop when you are done.</p> : null}
+            {transcribing ? <p className="mt-3 text-sm text-muted-foreground">Transcribing your answer...</p> : null}
             {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
           </div>
           <div className="border-t bg-card px-6 py-4 sm:px-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button variant={listening ? "destructive" : "outline"} onClick={toggleListening} disabled={submitting}>
-                {listening ? <MicOffIcon data-icon="inline-start" /> : <MicIcon data-icon="inline-start" />}
-                {listening ? "Stop listening" : "Answer with voice"}
+              <Button variant={recording ? "destructive" : "outline"} onClick={toggleRecording} disabled={submitting || transcribing}>
+                {recording ? <MicOffIcon data-icon="inline-start" /> : <MicIcon data-icon="inline-start" />}
+                {recording ? "Stop and transcribe" : transcribing ? "Transcribing answer" : "Answer with voice"}
               </Button>
-              <Button size="lg" onClick={submitAnswer} disabled={submitting || answer.trim().length < 2}>
+              <Button size="lg" onClick={submitAnswer} disabled={submitting || recording || transcribing || answer.trim().length < 2}>
                 {submitting ? (questionsAnswered === 4 ? "Preparing report" : "Preparing next question") : questionsAnswered === 4 ? "Finish interview" : "Submit answer"}
                 {!submitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
               </Button>
