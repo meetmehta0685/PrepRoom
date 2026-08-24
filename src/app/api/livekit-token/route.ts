@@ -1,9 +1,10 @@
-import { AccessToken } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/auth";
 import { hasDatabase, hasLiveKit } from "@/lib/config";
+import { findActiveParticipantRoom } from "@/lib/livekit-presence";
 import { prisma } from "@/lib/prisma";
 
 const requestSchema = z.object({
@@ -42,8 +43,38 @@ export async function POST(request: Request) {
     }
   }
 
+  const identity = session.user.id;
+
+  try {
+    const roomService = new RoomServiceClient(
+      process.env.LIVEKIT_URL!,
+      process.env.LIVEKIT_API_KEY!,
+      process.env.LIVEKIT_API_SECRET!,
+    );
+    const activeRoom = await findActiveParticipantRoom(roomService, identity);
+
+    if (activeRoom) {
+      return NextResponse.json(
+        {
+          code: "ALREADY_IN_MEETING",
+          error: "You are already in a meeting. Leave it before joining another.",
+        },
+        { status: 409 },
+      );
+    }
+  } catch (error) {
+    console.error("Failed to check active meeting", error);
+    return NextResponse.json(
+      {
+        code: "PRESENCE_CHECK_FAILED",
+        error: "Your active meeting status could not be checked. Try again.",
+      },
+      { status: 502 },
+    );
+  }
+
   const token = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
-    identity: `${session.user.id}-${crypto.randomUUID()}`,
+    identity,
     name: parsed.data.name,
     ttl: "2h",
   });

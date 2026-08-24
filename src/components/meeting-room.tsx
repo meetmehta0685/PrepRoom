@@ -9,11 +9,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 type TokenResponse = { token: string; serverUrl: string };
+type JoinError = { title: string; message: string };
+type TokenErrorResponse = {
+  code?: "ALREADY_IN_MEETING" | "PRESENCE_CHECK_FAILED";
+  error?: string;
+  setupRequired?: boolean;
+};
 
 export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId }: { code: string; name: string; audio: boolean; video: boolean; microphoneId?: string; cameraId?: string }) {
   const router = useRouter();
   const [connection, setConnection] = useState<TokenResponse>();
-  const [error, setError] = useState("");
+  const [error, setError] = useState<JoinError>();
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -24,10 +30,20 @@ export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, name }),
       });
-      const result = (await response.json()) as TokenResponse & { error?: string };
+      const result = (await response.json()) as TokenResponse & TokenErrorResponse;
       if (cancelled) return;
       if (!response.ok) {
-        setError(result.error ?? "The room could not connect.");
+        if (result.code === "ALREADY_IN_MEETING") {
+          setError({
+            title: "Already in a meeting",
+            message: "This Google account is connected in another tab or device. Leave that meeting before joining here.",
+          });
+        } else {
+          setError({
+            title: result.setupRequired ? "Room setup is incomplete" : "Could not join the room",
+            message: `${result.error ?? "The room could not connect."}${result.setupRequired ? " Add the values from .env.example, then restart the app." : ""}`,
+          });
+        }
         return;
       }
       setConnection(result);
@@ -48,8 +64,8 @@ export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId }
         <div className="w-full max-w-lg">
           <Alert className="bg-white text-foreground">
             <RadioIcon />
-            <AlertTitle>Room setup is incomplete</AlertTitle>
-            <AlertDescription>{error} Add the values from .env.example, then restart the app.</AlertDescription>
+            <AlertTitle>{error.title}</AlertTitle>
+            <AlertDescription>{error.message}</AlertDescription>
           </Alert>
           <Button variant="secondary" className="mt-4" onClick={() => router.push("/")}>Return home</Button>
         </div>
