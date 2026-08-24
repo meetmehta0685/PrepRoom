@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-export function MeetingLauncher({ signedIn }: { signedIn: boolean }) {
+export function MeetingLauncher({ signedIn, showCreate = true }: { signedIn: boolean; showCreate?: boolean }) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -53,10 +53,12 @@ export function MeetingLauncher({ signedIn }: { signedIn: boolean }) {
   return (
     <div className="flex max-w-xl flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button size="lg" className="h-12 px-5" onClick={createMeeting} disabled={creating}>
-          <PlusIcon data-icon="inline-start" />
-          {creating ? "Creating room" : "Create a room"}
-        </Button>
+        {showCreate ? (
+          <Button size="lg" className="h-12 px-5" onClick={createMeeting} disabled={creating}>
+            <PlusIcon data-icon="inline-start" />
+            {creating ? "Creating room" : "Create a room"}
+          </Button>
+        ) : null}
         <form onSubmit={joinMeeting} className="flex min-w-0 flex-1 gap-2">
           <FieldGroup>
             <Field data-invalid={Boolean(error)}>
@@ -79,9 +81,11 @@ export function MeetingLauncher({ signedIn }: { signedIn: boolean }) {
           </FieldGroup>
         </form>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {signedIn ? "Your room opens with camera and microphone controls." : "Sign in with Google to create or join a room."}
-      </p>
+      {showCreate ? (
+        <p className="text-sm text-muted-foreground">
+          {signedIn ? "Your room opens with camera and microphone controls." : "Sign in with Google to create or join a room."}
+        </p>
+      ) : null}
     </div>
   );
 }

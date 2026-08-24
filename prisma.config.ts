@@ -1,6 +1,8 @@
-import "dotenv/config";
-
+import { config } from "dotenv";
 import { defineConfig } from "prisma/config";
+
+config({ path: ".env.local" });
+config();
 
 const fallbackUrl = "postgresql://preproom:preproom@localhost:5432/preproom";
 

@@ -15,9 +15,11 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
     redirect(`/signin?callbackUrl=${encodeURIComponent(`/join/${normalizedCode}`)}`);
   }
 
+  let sessionTitle = "Study session";
   if (hasDatabase) {
     const meeting = await prisma.meeting.findUnique({ where: { code: normalizedCode } });
     if (!meeting || meeting.endedAt) notFound();
+    sessionTitle = meeting.title;
   }
 
   return (
@@ -27,7 +29,7 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
         <span className="font-semibold tracking-tight">PrepRoom</span>
       </div>
       <div className="mx-auto flex w-full max-w-5xl justify-center">
-        <JoinSetup code={normalizedCode} initialName={session.user.name ?? ""} />
+        <JoinSetup code={normalizedCode} initialName={session.user.name ?? ""} sessionTitle={sessionTitle} />
       </div>
     </main>
   );

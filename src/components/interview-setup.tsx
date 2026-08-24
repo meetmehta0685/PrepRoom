@@ -1,0 +1,183 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRightIcon, BotIcon, UsersIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { experienceLevels, interviewTracks, levelLabel, type ExperienceLevelValue, type InterviewModeValue, type InterviewTrackValue } from "@/lib/interviews";
+import { cn } from "@/lib/utils";
+
+export function InterviewSetup() {
+  const router = useRouter();
+  const [interviewerType, setInterviewerType] = useState<InterviewModeValue>("AI");
+  const [track, setTrack] = useState<InterviewTrackValue>("FULLSTACK");
+  const [level, setLevel] = useState<ExperienceLevelValue>("ENTRY");
+  const [jobTitle, setJobTitle] = useState("Software Engineer");
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function startInterview() {
+    setStarting(true);
+    setError("");
+    const response = await fetch("/api/interviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interviewerType, track, level, jobTitle }),
+    });
+    const result = (await response.json()) as { destination?: string; error?: string };
+    setStarting(false);
+
+    if (!response.ok || !result.destination) {
+      setError(result.error ?? "The interview could not be started.");
+      return;
+    }
+
+    router.push(result.destination);
+  }
+
+  return (
+    <div className="grid overflow-hidden rounded-3xl border bg-card shadow-2xl shadow-primary/8 lg:grid-cols-[0.78fr_1.22fr]">
+      <aside className="relative overflow-hidden bg-[oklch(0.18_0.045_264)] px-6 py-8 text-white sm:px-9 sm:py-10">
+        <div className="absolute -right-24 top-28 size-64 rounded-full bg-primary/35 blur-3xl" />
+        <p className="relative font-mono text-xs uppercase tracking-[0.2em] text-white/55">Interview room</p>
+        <h1 className="relative mt-4 max-w-sm font-display text-4xl font-medium leading-[1.02] tracking-[-0.035em] sm:text-5xl">
+          Choose who sits across from you.
+        </h1>
+        <p className="relative mt-5 max-w-sm text-sm leading-6 text-white/65">
+          Use the same focused interview structure with an AI interviewer or a peer you invite.
+        </p>
+
+        <div className="relative mt-12 grid grid-cols-[1fr_auto_1fr] items-center gap-3" aria-hidden="true">
+          <Seat label="You" detail="Candidate" active />
+          <div className="h-px w-8 bg-white/20 sm:w-12" />
+          <Seat
+            label={interviewerType === "AI" ? "AI" : "Peer"}
+            detail="Interviewer"
+            icon={interviewerType === "AI" ? <BotIcon /> : <UsersIcon />}
+            active
+          />
+        </div>
+        <div className="relative mt-9 flex gap-1" aria-hidden="true">
+          {Array.from({ length: 18 }, (_, index) => (
+            <span
+              key={index}
+              className="w-1 rounded-full bg-[oklch(0.78_0.13_65)]"
+              style={{ height: `${8 + ((index * 7) % 24)}px`, opacity: 0.35 + ((index * 3) % 7) / 10 }}
+            />
+          ))}
+        </div>
+      </aside>
+
+      <section className="px-6 py-8 sm:px-9 sm:py-10">
+        <FieldGroup className="gap-7">
+          <Field>
+            <FieldLabel>Interviewer</FieldLabel>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ModeButton
+                selected={interviewerType === "AI"}
+                icon={<BotIcon />}
+                title="Practice with AI"
+                description="Five adaptive questions and a feedback report"
+                onClick={() => setInterviewerType("AI")}
+              />
+              <ModeButton
+                selected={interviewerType === "PEER"}
+                icon={<UsersIcon />}
+                title="Invite a peer"
+                description="Create a live room and share the interview code"
+                onClick={() => setInterviewerType("PEER")}
+              />
+            </div>
+          </Field>
+
+          <Field>
+            <FieldLabel>Interview track</FieldLabel>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {interviewTracks.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  aria-pressed={track === item.value}
+                  onClick={() => setTrack(item.value)}
+                  className={cn(
+                    "rounded-xl border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    track === item.value ? "border-primary bg-primary/6" : "bg-background hover:bg-muted/60",
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{item.label}</span>
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">{item.description}</span>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="job-title">Target role</FieldLabel>
+              <Input id="job-title" value={jobTitle} onChange={(event) => setJobTitle(event.target.value)} maxLength={80} />
+            </Field>
+            <Field>
+              <FieldLabel>Experience</FieldLabel>
+              <Select value={level} onValueChange={(value) => value && setLevel(value as ExperienceLevelValue)}>
+                <SelectTrigger className="w-full"><SelectValue>{levelLabel(level)}</SelectValue></SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {experienceLevels.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+
+          {error ? <FieldDescription className="text-destructive">{error}</FieldDescription> : null}
+
+          <div className="flex flex-col-reverse gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-muted-foreground">
+              {interviewerType === "AI" ? "Voice works in supported browsers. Typing always works." : "Your peer joins as the interviewer from the shared code."}
+            </p>
+            <Button size="lg" className="h-11 shrink-0" onClick={startInterview} disabled={starting || jobTitle.trim().length < 2}>
+              {starting ? "Preparing interview" : interviewerType === "AI" ? "Start AI interview" : "Create peer interview"}
+              {!starting ? <ArrowRightIcon data-icon="inline-end" /> : null}
+            </Button>
+          </div>
+        </FieldGroup>
+      </section>
+    </div>
+  );
+}
+
+function ModeButton({ selected, icon, title, description, onClick }: { selected: boolean; icon: React.ReactNode; title: string; description: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "flex gap-3 rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        selected ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:bg-muted/60",
+      )}
+    >
+      <span className={cn("mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full", selected ? "bg-white/14" : "bg-secondary text-primary")}>{icon}</span>
+      <span>
+        <span className="block text-sm font-semibold">{title}</span>
+        <span className={cn("mt-1 block text-xs leading-5", selected ? "text-white/70" : "text-muted-foreground")}>{description}</span>
+      </span>
+    </button>
+  );
+}
+
+function Seat({ label, detail, icon, active }: { label: string; detail: string; icon?: React.ReactNode; active?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-white/12 bg-white/7 p-4 backdrop-blur-sm">
+      <div className={cn("flex size-10 items-center justify-center rounded-full bg-white/10 text-sm font-semibold", active && "ring-2 ring-[oklch(0.78_0.13_65)]/70")}>
+        {icon ?? label.slice(0, 2).toUpperCase()}
+      </div>
+      <p className="mt-6 text-sm font-semibold">{label}</p>
+      <p className="mt-0.5 text-[0.68rem] text-white/45">{detail}</p>
+    </div>
+  );
+}

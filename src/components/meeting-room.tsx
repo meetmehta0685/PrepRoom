@@ -16,7 +16,7 @@ type TokenErrorResponse = {
   setupRequired?: boolean;
 };
 
-export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId }: { code: string; name: string; audio: boolean; video: boolean; microphoneId?: string; cameraId?: string }) {
+export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId, sessionLabel = "Study session", participantRole }: { code: string; name: string; audio: boolean; video: boolean; microphoneId?: string; cameraId?: string; sessionLabel?: string; participantRole?: string }) {
   const router = useRouter();
   const [connection, setConnection] = useState<TokenResponse>();
   const [error, setError] = useState<JoinError>();
@@ -85,8 +85,8 @@ export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId }
     <main className="flex h-screen flex-col overflow-hidden bg-[oklch(0.14_0.03_263)] text-white">
       <header className="flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6">
         <div>
-          <p className="text-sm font-semibold">Study session</p>
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.15em] text-white/50">{code}</p>
+          <p className="text-sm font-semibold">{sessionLabel}</p>
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.15em] text-white/50">{participantRole ? `${participantRole} · ` : ""}{code}</p>
         </div>
         <Button variant="secondary" size="sm" onClick={copyInvite}>
           <CopyIcon data-icon="inline-start" />

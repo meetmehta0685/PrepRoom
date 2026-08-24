@@ -9,8 +9,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PrepRoom",
-  description: "Live study rooms and mock interviews for placement preparation.",
+  title: "PrepRoom · AI and peer mock interviews",
+  description: "Practise software-engineering interviews with an AI interviewer or a peer, then review focused feedback.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

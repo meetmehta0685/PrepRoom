@@ -37,14 +37,15 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String             @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?            @unique
   emailVerified DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
   meetings      Meeting[]
+  interviews    InterviewSession[] @relation("CandidateInterviews")
 
   @@map("users")
 }
@@ -59,15 +60,94 @@ model VerificationToken {
 }
 
 model Meeting {
-  id          String    @id @default(cuid())
-  code        String    @unique
-  livekitRoom String    @unique
-  title       String    @default("Study session")
+  id          String            @id @default(cuid())
+  code        String            @unique
+  livekitRoom String            @unique
+  title       String            @default("Study session")
   createdById String
-  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
+  createdBy   User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime          @default(now())
   endedAt     DateTime?
+  interview   InterviewSession?
 
   @@index([createdById])
   @@map("meetings")
+}
+
+enum InterviewMode {
+  AI
+  PEER
+}
+
+enum InterviewTrack {
+  FULLSTACK
+  FRONTEND
+  BACKEND
+  DSA
+  SYSTEM_DESIGN
+  BEHAVIORAL
+}
+
+enum ExperienceLevel {
+  ENTRY
+  MID
+  SENIOR
+}
+
+enum InterviewStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum InterviewMessageRole {
+  INTERVIEWER
+  CANDIDATE
+}
+
+model InterviewSession {
+  id              String             @id @default(cuid())
+  candidateId     String
+  candidate       User               @relation("CandidateInterviews", fields: [candidateId], references: [id], onDelete: Cascade)
+  interviewerType InterviewMode
+  track           InterviewTrack
+  level           ExperienceLevel
+  jobTitle        String             @default("Software Engineer")
+  status          InterviewStatus    @default(ACTIVE)
+  meetingId       String?            @unique
+  meeting         Meeting?           @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  messages        InterviewMessage[]
+  report          InterviewReport?
+  createdAt       DateTime           @default(now())
+  completedAt     DateTime?
+
+  @@index([candidateId, createdAt])
+  @@map("interview_sessions")
+}
+
+model InterviewMessage {
+  id          String               @id @default(cuid())
+  interviewId String
+  interview   InterviewSession     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  role        InterviewMessageRole
+  content     String               @db.Text
+  createdAt   DateTime             @default(now())
+
+  @@index([interviewId, createdAt])
+  @@map("interview_messages")
+}
+
+model InterviewReport {
+  id                 String           @id @default(cuid())
+  interviewId        String           @unique
+  interview          InterviewSession @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  overallScore       Int
+  technicalScore     Int
+  communicationScore Int
+  summary            String           @db.Text
+  strengths          String[]
+  improvements       String[]
+  nextSteps          String[]
+  createdAt          DateTime         @default(now())
+
+  @@map("interview_reports")
 }

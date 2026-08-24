@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 type DeviceOption = { deviceId: string; label: string };
 
-export function JoinSetup({ code, initialName }: { code: string; initialName: string }) {
+export function JoinSetup({ code, initialName, sessionTitle = "Study session" }: { code: string; initialName: string; sessionTitle?: string }) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [name, setName] = useState(initialName);
@@ -112,7 +112,7 @@ export function JoinSetup({ code, initialName }: { code: string; initialName: st
         <div className="flex flex-col">
           <CardHeader>
             <p className="font-mono text-xs uppercase tracking-[0.16em] text-primary">Room {code}</p>
-            <CardTitle className="font-display text-3xl font-medium">Ready to join?</CardTitle>
+            <CardTitle className="font-display text-3xl font-medium">{sessionTitle}</CardTitle>
             <CardDescription>Check your name and devices before entering.</CardDescription>
           </CardHeader>
           <CardContent className="flex-1">

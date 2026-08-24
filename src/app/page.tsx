@@ -1,12 +1,15 @@
-import { ArrowUpRightIcon, CheckIcon } from "lucide-react";
+import Link from "next/link";
+import { ArrowRightIcon, ArrowUpRightIcon, CheckIcon } from "lucide-react";
 
 import { auth } from "@/auth";
 import { MeetingLauncher } from "@/components/meeting-launcher";
 import { RoomPreview } from "@/components/room-preview";
 import { SiteHeader } from "@/components/site-header";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-const outcomes = ["Mock interviews", "Peer study calls", "Screen sharing", "Built-in room chat"];
+const outcomes = ["AI interviewer", "Peer interviews", "Adaptive questions", "Feedback reports"];
 
 export default async function Home() {
   const session = await auth();
@@ -24,10 +27,17 @@ export default async function Home() {
             Practise together. <span className="text-primary">Interview better.</span>
           </h1>
           <p className="mt-6 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
-            Open a focused room for mock interviews, DSA practice, and study sessions. Video, screen sharing, and chat stay in one place.
+            Practise software-engineering interviews with an AI or invite a peer. Work through focused questions and leave with a clear report.
           </p>
-          <div className="mt-8">
-            <MeetingLauncher signedIn={Boolean(session?.user)} />
+          <div className="mt-8 flex flex-col items-start gap-5">
+            <Link href="/interview/new" className={cn(buttonVariants({ size: "lg" }), "h-12 px-5")}>
+              Start a mock interview
+              <ArrowRightIcon data-icon="inline-end" />
+            </Link>
+            <div className="w-full max-w-md">
+              <p className="mb-2 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-muted-foreground">Joining an interview?</p>
+              <MeetingLauncher signedIn={Boolean(session?.user)} showCreate={false} />
+            </div>
           </div>
           <ul className="mt-9 flex flex-wrap gap-x-5 gap-y-3 text-sm text-muted-foreground">
             {outcomes.map((outcome) => (
@@ -43,9 +53,9 @@ export default async function Home() {
 
       <section className="border-y bg-card/70 backdrop-blur-sm">
         <div className="mx-auto grid w-full max-w-7xl gap-8 px-5 py-12 sm:px-8 md:grid-cols-3 lg:px-10">
-          <Feature label="01" title="Create in one click" copy="Start a private room and share the short code with your study partner." />
-          <Feature label="02" title="Check your setup" copy="Choose your camera and microphone before you enter the room." />
-          <Feature label="03" title="Stay on the problem" copy="Use chat and screen sharing without leaving the call or breaking focus." />
+          <Feature label="01" title="Choose the interviewer" copy="Practise alone with AI or invite a peer into a private LiveKit room." />
+          <Feature label="02" title="Work through five questions" copy="Pick a software-engineering track and answer at the level you are targeting." />
+          <Feature label="03" title="Review the report" copy="See technical and communication scores with concrete areas to practise next." />
         </div>
       </section>
 
