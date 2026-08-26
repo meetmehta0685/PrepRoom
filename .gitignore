@@ -28,3 +28,7 @@ next-env.d.ts
 # prisma
 /src/generated/prisma
 .vercel
+
+# local design QA and generated exports
+/.impeccable/
+/output/

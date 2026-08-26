@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AiInterviewRoom } from "@/components/ai-interview-room";
+import { countInterviewQuestionSources } from "@/lib/ai-interviewer";
 import type { ExperienceLevelValue, InterviewTrackValue } from "@/lib/interviews";
 import { prisma } from "@/lib/prisma";
 
@@ -20,6 +21,19 @@ export default async function InterviewPage({ params }: { params: Promise<{ id: 
 
   if (!interview || interview.candidateId !== session.user.id || interview.interviewerType !== "AI") notFound();
 
+  const messages = interview.messages.map((message) => ({
+    id: message.id,
+    role: message.role,
+    content: message.content,
+    questionType: message.questionType,
+    codeLanguage: message.codeLanguage,
+  }));
+  const questionSources = countInterviewQuestionSources({
+    track: interview.track as InterviewTrackValue,
+    jobTitle: interview.jobTitle,
+    turns: messages,
+  });
+
   return (
     <AiInterviewRoom
       interview={{
@@ -27,13 +41,8 @@ export default async function InterviewPage({ params }: { params: Promise<{ id: 
         track: interview.track as InterviewTrackValue,
         level: interview.level as ExperienceLevelValue,
         jobTitle: interview.jobTitle,
-        messages: interview.messages.map((message) => ({
-          id: message.id,
-          role: message.role,
-          content: message.content,
-          questionType: message.questionType,
-          codeLanguage: message.codeLanguage,
-        })),
+        messages,
+        questionSources,
         report: interview.report,
       }}
     />

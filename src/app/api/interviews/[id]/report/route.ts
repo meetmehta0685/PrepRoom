@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { createInterviewReportPdf } from "@/lib/interview-report-pdf";
+import { countInterviewQuestionSources } from "@/lib/ai-interviewer";
 import { levelLabel, trackLabel, type ExperienceLevelValue, type InterviewTrackValue } from "@/lib/interviews";
 import { prisma } from "@/lib/prisma";
 
@@ -20,6 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const interview = await prisma.interviewSession.findUnique({
     where: { id },
     include: {
+      messages: { orderBy: { createdAt: "asc" } },
       report: { include: { questionReviews: { orderBy: { questionNumber: "asc" } } } },
     },
   });
@@ -36,6 +38,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     track: trackLabel(interview.track as InterviewTrackValue),
     level: levelLabel(interview.level as ExperienceLevelValue),
     completedAt: interview.completedAt ?? interview.report.createdAt,
+    questionSources: countInterviewQuestionSources({
+      track: interview.track as InterviewTrackValue,
+      jobTitle: interview.jobTitle,
+      turns: interview.messages,
+    }),
     ...interview.report,
   });
 

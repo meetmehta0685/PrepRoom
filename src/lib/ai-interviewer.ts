@@ -15,7 +15,6 @@ type ConversationTurn = {
 };
 
 const nextQuestionSchema = z.object({
-  feedback: z.string().trim().min(1).max(500),
   question: z.string().trim().min(1).max(1200),
   questionType: z.enum(["TEXT", "CODE"]),
   codeLanguage: z.enum(codeLanguageValues).nullable(),
@@ -42,20 +41,26 @@ const reportSchema = z.object({
   resumeDepthScore: z.number().int().min(0).max(100),
   summary: z.string().trim().min(1).max(1200),
   hiringSignal: z.string().trim().min(1).max(500),
-  strengths: z.array(z.string().trim().min(1).max(240)).min(1).max(4),
+  strengths: z.array(z.string().trim().min(1).max(240)).max(4),
   improvements: z.array(z.string().trim().min(1).max(240)).min(1).max(4),
   nextSteps: z.array(z.string().trim().min(1).max(240)).min(1).max(4),
   questionReviews: z.array(z.object({
     questionNumber: z.number().int().min(1).max(5),
     benchmarkAnswer: z.string().trim().min(1).max(3000),
     score: z.number().int().min(0).max(100),
-    strengths: z.array(z.string().trim().min(1).max(240)).min(1).max(3),
+    strengths: z.array(z.string().trim().min(1).max(240)).max(3),
     gaps: z.array(z.string().trim().min(1).max(240)).min(1).max(3),
     betterApproach: z.string().trim().min(1).max(1600),
   })).min(1).max(5),
 });
 
 type GeneratedReportData = z.infer<typeof reportSchema>;
+export type QuestionSourceCounts = { ai: number; practice: number };
+export const candidateSafeAnswerFeedback = "Answer saved. The next question is ready.";
+
+export function validateGeneratedReport(value: unknown) {
+  return reportSchema.parse(value);
+}
 export type InterviewQuestionReviewData = GeneratedReportData["questionReviews"][number] & {
   question: string;
   candidateAnswer: string;
@@ -143,6 +148,111 @@ function fallbackBenchmark(questionType: QuestionType, track: InterviewTrackValu
   return "A strong answer clarifies the requirements, states assumptions, proposes a concrete design, and compares alternatives before choosing one. It should connect the decision to a real project, quantify the outcome where possible, and explain testing, failure handling, security, and operational trade-offs relevant to the question.";
 }
 
+function fallbackOpeningQuestion(jobTitle: string) {
+  return `Choose one project from your resume that best demonstrates your fit for a ${jobTitle} role. What did you build, which decisions were yours, and what would you change now?`;
+}
+
+type RoleFamily = "frontend" | "backend" | "mobile" | "data" | "platform" | "general";
+
+function roleFamily(jobTitle: string): RoleFamily {
+  const normalized = jobTitle.toLowerCase();
+  if (/mobile|ios|android|flutter|react native/.test(normalized)) return "mobile";
+  if (/front.?end|react|ui|web/.test(normalized)) return "frontend";
+  if (/back.?end|api|server|database/.test(normalized)) return "backend";
+  if (/data|machine learning|\bml\b|analytics/.test(normalized)) return "data";
+  if (/devops|platform|cloud|\bsre\b|reliability|infrastructure/.test(normalized)) return "platform";
+  return "general";
+}
+
+const fullStackRoleQuestions: Record<RoleFamily, string[]> = {
+  frontend: [
+    "A browser screen becomes sluggish after several live updates. How would you locate the rendering bottleneck and fix it without hiding stale data?",
+    "How would you structure server state, optimistic updates, and rollback for a complex React workflow?",
+  ],
+  backend: [
+    "How would you design an idempotent API that remains correct when clients retry requests and workers process events more than once?",
+    "A database write and its follow-up event must either both take effect or be recoverable. How would you design that flow?",
+  ],
+  mobile: [
+    "How would you design offline-first synchronization for a mobile client when the same record can change on multiple devices?",
+    "A mobile release must keep working across several API versions. How would you evolve the contract and handle partial rollouts?",
+  ],
+  data: [
+    "How would you design an ingestion pipeline that detects duplicate, late, and malformed events without silently corrupting downstream metrics?",
+    "A production metric suddenly diverges from its source data. How would you trace the fault and prevent a recurrence?",
+  ],
+  platform: [
+    "How would you roll out a risky service change with health checks, automatic rollback, and useful operational signals?",
+    "A shared platform dependency is causing intermittent failures across services. How would you isolate the cause and reduce the blast radius?",
+  ],
+  general: [
+    "Walk through a cross-stack feature you owned. Where did you place the boundaries between the client, API, and data layer, and why?",
+    "How would you evolve a production feature when the client and server cannot be deployed at the same time?",
+  ],
+};
+
+export function getCuratedQuestionBank(track: InterviewTrackValue, jobTitle: string) {
+  if (track !== "FULLSTACK") return [...questionBank[track]];
+  return [...fullStackRoleQuestions[roleFamily(jobTitle)], ...questionBank.FULLSTACK.slice(0, 3)];
+}
+
+export function selectCuratedQuestion({
+  track,
+  jobTitle,
+  askedQuestions,
+  random = Math.random,
+}: {
+  track: InterviewTrackValue;
+  jobTitle: string;
+  askedQuestions: string[];
+  random?: () => number;
+}) {
+  const bank = getCuratedQuestionBank(track, jobTitle);
+  const unasked = bank.filter((question) => !askedQuestions.includes(question));
+  const candidates = unasked.length > 0 ? unasked : bank;
+  const position = Math.min(candidates.length - 1, Math.floor(Math.max(0, Math.min(0.999999, random())) * candidates.length));
+  return candidates[position];
+}
+
+const fullStackCodingQuestions: Record<RoleFamily, string> = {
+  frontend: "Implement a JavaScript function mergeRenderUpdates(current, incoming) for a browser component. Each array contains { id, value } objects; incoming values replace matching ids and new ids append in incoming order. Do not mutate either input. Example input: current = [{id: 'a', value: 1}], incoming = [{id: 'a', value: 2}, {id: 'b', value: 3}]. Example output: [{id: 'a', value: 2}, {id: 'b', value: 3}]. Explain complexity.",
+  backend: "Implement a JavaScript function dedupeApiEvents(events) for an API request pipeline. Each event is { id, receivedAt }; retain only the earliest event for each id and return results ordered by receivedAt. Example input: [{id: 'a', receivedAt: 3}, {id: 'a', receivedAt: 1}, {id: 'b', receivedAt: 2}]. Example output: [{id: 'a', receivedAt: 1}, {id: 'b', receivedAt: 2}]. Explain complexity.",
+  mobile: "Implement a JavaScript function mergeOfflineChanges(local, remote) for mobile sync. Each item is { id, updatedAt, value }; keep the newer item per id and return ids in alphabetical order. Example input: local = [{id: 'a', updatedAt: 2, value: 'L'}], remote = [{id: 'a', updatedAt: 1, value: 'R'}, {id: 'b', updatedAt: 3, value: 'B'}]. Example output: [{id: 'a', updatedAt: 2, value: 'L'}, {id: 'b', updatedAt: 3, value: 'B'}]. Explain complexity.",
+  data: "Implement a JavaScript function mergeSortedBatches(left, right). Both inputs contain records { timestamp, value } sorted by timestamp; return one sorted array and preserve left-before-right order for equal timestamps. Example input: left = [{timestamp: 1, value: 'a'}], right = [{timestamp: 1, value: 'b'}, {timestamp: 2, value: 'c'}]. Example output: [{timestamp: 1, value: 'a'}, {timestamp: 1, value: 'b'}, {timestamp: 2, value: 'c'}]. Explain complexity.",
+  platform: "Implement a JavaScript function selectHealthyServer(servers). Each server is { id, healthy, latencyMs }; return the healthy server with the lowest latency, breaking ties by id, or null if none are healthy. Example input: [{id: 'b', healthy: true, latencyMs: 20}, {id: 'a', healthy: true, latencyMs: 20}]. Example output: {id: 'a', healthy: true, latencyMs: 20}. Explain complexity.",
+  general: codingQuestionBank.FULLSTACK,
+};
+
+export function getCodingQuestion(track: InterviewTrackValue, jobTitle: string) {
+  if (track === "BEHAVIORAL") return "";
+  if (track === "FULLSTACK") return fullStackCodingQuestions[roleFamily(jobTitle)];
+  return codingQuestionBank[track];
+}
+
+export function countInterviewQuestionSources({
+  track,
+  jobTitle,
+  turns,
+}: {
+  track: InterviewTrackValue;
+  jobTitle: string;
+  turns: ConversationTurn[];
+}): QuestionSourceCounts {
+  const curatedQuestions = new Set<string>([
+    fallbackOpeningQuestion(jobTitle),
+    ...questionBank[track],
+    ...getCuratedQuestionBank(track, jobTitle),
+    ...(track === "BEHAVIORAL" ? [] : [codingQuestionBank[track], getCodingQuestion(track, jobTitle)]),
+  ]);
+
+  return turns.reduce<QuestionSourceCounts>((counts, turn) => {
+    if (turn.role !== "INTERVIEWER") return counts;
+    if (curatedQuestions.has(turn.content)) counts.practice += 1;
+    else counts.ai += 1;
+    return counts;
+  }, { ai: 0, practice: 0 });
+}
+
 export async function createOpeningQuestion({
   track,
   level,
@@ -159,7 +269,7 @@ export async function createOpeningQuestion({
       [
         {
           role: "system",
-          content: `You are conducting a ${levelLabel(level)} ${jobTitle} interview in the ${trackLabel(track)} track. Ask one precise opening question grounded in a real project, technology, or claim from the resume. The question must make sense for the selected role. Choose CODE only when a short implementation task is the best opening; otherwise choose TEXT. Return JSON with exactly four fields: feedback set to "Interview ready.", question, questionType as TEXT or CODE, and codeLanguage as javascript, typescript, python, java, cpp, or null. CODE questions need a concrete input/output contract and examples. TEXT questions must use null for codeLanguage.`,
+          content: `You are conducting a ${levelLabel(level)} ${jobTitle} interview in the ${trackLabel(track)} track. Ask one precise opening question grounded in a real project, technology, or claim from the resume. The question must make sense for the selected role. Choose CODE only when a short implementation task is the best opening; otherwise choose TEXT. Return JSON with exactly three fields: question, questionType as TEXT or CODE, and codeLanguage as javascript, typescript, python, java, cpp, or null. CODE questions need a concrete input/output contract and examples. TEXT questions must use null for codeLanguage.`,
         },
         { role: "user", content: resumeContext(resumeText) },
       ],
@@ -171,8 +281,7 @@ export async function createOpeningQuestion({
   }
 
   return {
-    feedback: "",
-    question: `Choose one project from your resume that best demonstrates your fit for a ${jobTitle} role. What did you build, which decisions were yours, and what would you change now?`,
+    question: fallbackOpeningQuestion(jobTitle),
     questionType: "TEXT" as const,
     codeLanguage: null,
     provider: "practice" as const,
@@ -196,16 +305,17 @@ export async function createNextQuestion({
 }) {
   const hasCodingQuestion = turns.some((turn) => turn.role === "INTERVIEWER" && turn.questionType === "CODE");
   const mustAskCode = track !== "BEHAVIORAL" && answerCount >= 3 && !hasCodingQuestion;
+  const askedQuestions = turns.filter((turn) => turn.role === "INTERVIEWER").map((turn) => turn.content);
   const fallbackQuestion = mustAskCode
-    ? codingQuestionBank[track as Exclude<InterviewTrackValue, "BEHAVIORAL">]
-    : questionBank[track][Math.min(answerCount, questionBank[track].length - 1)];
+    ? getCodingQuestion(track, jobTitle)
+    : selectCuratedQuestion({ track, jobTitle, askedQuestions });
 
   try {
     const generated = await groqJson(
       [
         {
           role: "system",
-          content: `You are a concise software-engineering interviewer. Assess the latest answer, then choose the strongest next question for a ${levelLabel(level)} ${jobTitle} interview in the ${trackLabel(track)} track. Ground questions in the resume, the candidate's projects, the target role, and previous answers. Do not repeat a question or reveal an ideal answer. The five-question interview should include one practical coding task when relevant. If no coding question has appeared by question four, make the next question CODE. CODE questions need a concrete input/output contract and examples. Return JSON with exactly four fields: feedback, question, questionType as TEXT or CODE, and codeLanguage as javascript, typescript, python, java, cpp, or null. TEXT questions must use null for codeLanguage.`,
+          content: `You are a concise software-engineering interviewer. Choose the strongest next question for a ${levelLabel(level)} ${jobTitle} interview in the ${trackLabel(track)} track. Ground questions in the resume, the candidate's projects, the target role, and previous answers. Do not repeat a question, assess the candidate in your response, or reveal an ideal answer. The five-question interview should include one practical coding task when relevant. If no coding question has appeared by question four, make the next question CODE. CODE questions need a concrete input/output contract and examples. Return JSON with exactly three fields: question, questionType as TEXT or CODE, and codeLanguage as javascript, typescript, python, java, cpp, or null. TEXT questions must use null for codeLanguage.`,
         },
         { role: "user", content: `${resumeContext(resumeText)}\n\n<interview>\n${transcript(turns)}\n</interview>` },
       ],
@@ -214,7 +324,6 @@ export async function createNextQuestion({
     if (generated) {
       if (mustAskCode && generated.questionType !== "CODE") {
         return {
-          feedback: generated.feedback,
           question: fallbackQuestion,
           questionType: "CODE" as const,
           codeLanguage: "javascript" as const,
@@ -228,7 +337,6 @@ export async function createNextQuestion({
   }
 
   return {
-    feedback: "Answer saved. I will use it in your final report.",
     question: fallbackQuestion,
     questionType: mustAskCode ? "CODE" as const : "TEXT" as const,
     codeLanguage: mustAskCode ? "javascript" as const : null,
@@ -277,34 +385,26 @@ export async function createInterviewReport({
     console.error("AI interview report failed", error);
   }
 
-  const answers = turns.filter((turn) => turn.role === "CANDIDATE").map((turn) => turn.content.trim());
-  const averageWords = answers.reduce((total, answer) => total + answer.split(/\s+/).length, 0) / Math.max(answers.length, 1);
-  const communicationScore = Math.max(45, Math.min(78, Math.round(48 + averageWords / 3)));
-  const technicalScore = Math.max(45, Math.min(72, Math.round(44 + averageWords / 4)));
-  const problemSolvingScore = Math.max(44, Math.min(72, Math.round(42 + averageWords / 4)));
-  const roleFitScore = Math.max(45, Math.min(74, Math.round(46 + averageWords / 4)));
-  const resumeDepthScore = resumeText ? Math.max(45, Math.min(76, Math.round(45 + averageWords / 3))) : 45;
-
   return {
     provider: "practice" as const,
     report: {
-      overallScore: Math.round((technicalScore + communicationScore + problemSolvingScore + roleFitScore + resumeDepthScore) / 5),
-      technicalScore,
-      communicationScore,
-      problemSolvingScore,
-      roleFitScore,
-      resumeDepthScore,
-      summary: "Your interview is complete. This baseline report preserves each answer and gives you a structured benchmark for review. AI scoring was unavailable for this session.",
-      hiringSignal: "More evidence is needed before making a hiring recommendation. Strengthen the answers with concrete decisions, measurable outcomes, and explicit trade-offs.",
-      strengths: ["Completed the full interview", "Explained your thinking in your own words"],
+      overallScore: 0,
+      technicalScore: 0,
+      communicationScore: 0,
+      problemSolvingScore: 0,
+      roleFitScore: 0,
+      resumeDepthScore: 0,
+      summary: "AI evaluation was unavailable. This report preserves your submitted answers and practice guidance without assigning scores.",
+      hiringSignal: "No hiring signal is available because the interview was not evaluated.",
+      strengths: [],
       improvements: ["Use one concrete example in each answer", "State trade-offs before choosing an approach"],
       nextSteps: ["Repeat this track and compare your next scores", "Review each answer and add measurable details"],
       questionReviews: pairs.map((pair, index) => ({
         questionNumber: index + 1,
         ...pair,
         benchmarkAnswer: fallbackBenchmark(pair.questionType, track),
-        score: Math.round((technicalScore + communicationScore) / 2),
-        strengths: ["You submitted a complete answer in your own words."],
+        score: 0,
+        strengths: [],
         gaps: ["Add a concrete example, explicit trade-offs, and a verifiable result."],
         betterApproach: pair.questionType === "CODE"
           ? "Start by restating the contract and edge cases. Explain the chosen data structure, implement the smallest correct solution, then walk through examples and complexity before adding focused tests."

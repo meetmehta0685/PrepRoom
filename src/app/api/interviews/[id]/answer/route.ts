@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { codeLanguageValues, createInterviewReport, createNextQuestion } from "@/lib/ai-interviewer";
+import { candidateSafeAnswerFeedback, codeLanguageValues, createInterviewReport, createNextQuestion } from "@/lib/ai-interviewer";
 import type { ExperienceLevelValue, InterviewTrackValue } from "@/lib/interviews";
 import { prisma } from "@/lib/prisma";
 
@@ -109,7 +109,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     return NextResponse.json({
       completed: false,
-      feedback: generated.feedback,
+      feedback: candidateSafeAnswerFeedback,
       question,
       provider: generated.provider,
     });

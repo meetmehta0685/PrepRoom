@@ -28,7 +28,8 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --font-sans: "Manrope Variable", sans-serif;
-  --font-display: "Newsreader Variable", serif;
+  --font-display: "League Gothic Variable", sans-serif;
+  --font-note: "Newsreader Variable", serif;
   --font-mono: "JetBrains Mono Variable", monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -91,11 +92,7 @@
 body {
   font-family: "Manrope Variable", sans-serif;
   min-height: 100vh;
-  background-image:
-    radial-gradient(circle at 85% 8%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 24rem),
-    linear-gradient(color-mix(in oklab, var(--border) 28%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in oklab, var(--border) 28%, transparent) 1px, transparent 1px);
-  background-size: auto, 32px 32px, 32px 32px;
+  background-color: var(--background);
 }
 
 ::selection {
@@ -103,11 +100,227 @@ body {
 }
 
 .font-display {
-  font-family: "Newsreader Variable", serif;
+  font-family: "League Gothic Variable", sans-serif;
 }
 
 .font-mono {
   font-family: "JetBrains Mono Variable", monospace;
+}
+
+.font-note {
+  font-family: "Newsreader Variable", serif;
+}
+
+.landing-sheet {
+  --radius: 0.125rem;
+  --background: #f2efe5;
+  --foreground: #151512;
+  --card: #f2efe5;
+  --card-foreground: #151512;
+  --popover: #f2efe5;
+  --popover-foreground: #151512;
+  --primary: #2e55ff;
+  --primary-foreground: #ffffff;
+  --secondary: #ded9cb;
+  --secondary-foreground: #151512;
+  --muted: #e5e0d3;
+  --muted-foreground: #4d4b44;
+  --accent: #dfff45;
+  --accent-foreground: #151512;
+  --border: #151512;
+  --input: #151512;
+  --ring: #2e55ff;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.landing-frame {
+  background-color: var(--background);
+  background-image: url("/preproom-paper.png");
+  background-size: 512px 512px;
+}
+
+.landing-sheet :where(a, button, input):focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+.landing-sheet ::selection {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.landing-sheet ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.landing-sheet ::-webkit-scrollbar-track {
+  background: var(--background);
+  border: 1px solid var(--border);
+}
+
+.landing-sheet ::-webkit-scrollbar-thumb {
+  background: var(--foreground);
+  border: 3px solid var(--background);
+}
+
+.punch-hole,
+.registration-mark,
+.tape-tab {
+  position: absolute;
+  pointer-events: none;
+}
+
+.punch-hole {
+  z-index: 2;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: var(--foreground);
+}
+
+.tape-tab {
+  width: 4.5rem;
+  height: 1.5rem;
+  transform: rotate(-2deg);
+  background-image: url("/preproom-tape.png");
+  background-position: center;
+  background-size: 100% 100%;
+}
+
+.signin-tape-label,
+.paper-tape-label {
+  background-image: url("/preproom-tape.png");
+  background-position: center;
+  background-size: 100% 100%;
+}
+
+.rehearsal-room [data-lk-theme="default"] {
+  --lk-bg: #151512;
+  --lk-bg2: #24241f;
+  --lk-bg3: #33332c;
+  --lk-bg4: #424239;
+  --lk-bg5: #515146;
+  --lk-fg: #f2efe5;
+  --lk-fg2: #e5e0d3;
+  --lk-fg3: #ded9cb;
+  --lk-fg4: #c6c0b2;
+  --lk-fg5: #aaa496;
+  --lk-border-color: rgb(242 239 229 / 24%);
+  --lk-accent-fg: #151512;
+  --lk-accent-bg: #dfff45;
+  --lk-accent2: #d5ef46;
+  --lk-accent3: #c9df45;
+  --lk-accent4: #bdd043;
+  --lk-control-fg: #f2efe5;
+  --lk-control-bg: #24241f;
+  --lk-control-hover-bg: #33332c;
+  --lk-control-active-bg: #424239;
+  --lk-control-active-hover-bg: #515146;
+  --lk-font-family: "Manrope Variable", sans-serif;
+  --lk-border-radius: 0.125rem;
+  --lk-box-shadow: none;
+  --lk-grid-gap: 1px;
+}
+
+.rehearsal-room .lk-participant-tile,
+.rehearsal-room .lk-device-menu,
+.rehearsal-room .lk-settings-menu-modal,
+.rehearsal-room .lk-toast {
+  border: 1px solid var(--lk-border-color);
+}
+
+.registration-mark {
+  z-index: 2;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--foreground);
+  border-radius: 999px;
+}
+
+.registration-mark::before,
+.registration-mark::after {
+  position: absolute;
+  content: "";
+  background: var(--foreground);
+}
+
+.registration-mark::before {
+  left: 50%;
+  top: -0.3rem;
+  width: 1px;
+  height: 1.85rem;
+}
+
+.registration-mark::after {
+  left: -0.3rem;
+  top: 50%;
+  width: 1.85rem;
+  height: 1px;
+}
+
+.mode-cue ul li {
+  position: relative;
+  padding-left: 1rem;
+}
+
+.mode-cue ul li::before {
+  position: absolute;
+  left: 0;
+  top: 0.48rem;
+  width: 0.35rem;
+  height: 0.35rem;
+  content: "";
+  background: var(--accent);
+  outline: 1px solid var(--foreground);
+}
+
+.cue-step-current {
+  outline: 2px solid var(--foreground);
+  outline-offset: -5px;
+}
+
+.mode-code-frame::before,
+.mode-code-frame::after {
+  position: absolute;
+  top: 15%;
+  width: 2rem;
+  height: 70%;
+  content: "";
+  border-bottom: 2px solid var(--foreground);
+  border-top: 2px solid var(--foreground);
+}
+
+.mode-code-frame::before {
+  left: 0;
+  border-left: 2px solid var(--foreground);
+}
+
+.mode-code-frame::after {
+  right: 0;
+  border-right: 2px solid var(--foreground);
+}
+
+.adaptive-note {
+  animation: cue-note-reveal 680ms cubic-bezier(0.22, 1, 0.36, 1) 280ms both;
+}
+
+@keyframes cue-note-reveal {
+  from {
+    clip-path: inset(0 16% 0 0);
+    filter: blur(1px);
+  }
+  to {
+    clip-path: inset(0);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adaptive-note {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

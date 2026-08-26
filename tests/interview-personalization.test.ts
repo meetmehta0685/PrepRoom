@@ -29,3 +29,13 @@ test("AI interviews can present a multi-language coding workspace", async () => 
   assert.match(editor, /Use plain text/);
   assert.match(editor, /Plain-text code answer/);
 });
+
+test("candidate feedback is fixed and interview sources remain cumulative", async () => {
+  const room = await readFile(new URL("../src/components/ai-interview-room.tsx", import.meta.url), "utf8");
+  const route = await readFile(new URL("../src/app/api/interviews/[id]/answer/route.ts", import.meta.url), "utf8");
+
+  assert.doesNotMatch(room, /result\.feedback/);
+  assert.match(route, /candidateSafeAnswerFeedback/);
+  assert.match(room, /current\.practice \+ \(result\.provider === "practice" \? 1 : 0\)/);
+  assert.match(room, /Not scored/);
+});

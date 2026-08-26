@@ -18,6 +18,7 @@
     "@auth/prisma-adapter": "^2.11.3",
     "@base-ui/react": "^1.7.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/league-gothic": "^5.3.0",
     "@fontsource-variable/manrope": "^5.3.0",
     "@fontsource-variable/newsreader": "^5.3.0",
     "@livekit/components-react": "^2.9.24",

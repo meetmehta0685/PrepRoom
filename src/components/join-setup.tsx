@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { MicIcon, MicOffIcon, VideoIcon, VideoOffIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -76,13 +75,12 @@ export function JoinSetup({ code, initialName, sessionTitle = "Study session" }:
   }
 
   return (
-    <Card className="w-full max-w-5xl overflow-hidden shadow-xl shadow-primary/5">
-      <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="relative min-h-[360px] bg-[oklch(0.18_0.035_263)] p-4 lg:min-h-[570px]">
-          <video ref={videoRef} autoPlay muted playsInline className={cn("size-full rounded-2xl object-cover", !cameraOn && "invisible")} />
+    <div className="grid border-b lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="relative min-h-[360px] bg-foreground p-4 lg:min-h-[calc(100vh-5rem)] lg:border-r">
+          <video ref={videoRef} autoPlay muted playsInline className={cn("size-full border border-background/20 object-cover", !cameraOn && "invisible")} />
           {!cameraOn ? (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex size-24 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-primary-foreground">
+              <div className="flex size-24 items-center justify-center rounded-full bg-accent text-2xl font-semibold text-accent-foreground">
                 {name.trim().slice(0, 2).toUpperCase() || "PR"}
               </div>
             </div>
@@ -91,7 +89,7 @@ export function JoinSetup({ code, initialName, sessionTitle = "Study session" }:
             <Button
               variant={micOn ? "secondary" : "destructive"}
               size="icon-lg"
-              className="size-12 rounded-full"
+              className="size-12 border"
               onClick={() => setMicOn((value) => !value)}
               aria-label={micOn ? "Turn microphone off" : "Turn microphone on"}
             >
@@ -100,7 +98,7 @@ export function JoinSetup({ code, initialName, sessionTitle = "Study session" }:
             <Button
               variant={cameraOn ? "secondary" : "destructive"}
               size="icon-lg"
-              className="size-12 rounded-full"
+              className="size-12 border"
               onClick={() => setCameraOn((value) => !value)}
               aria-label={cameraOn ? "Turn camera off" : "Turn camera on"}
             >
@@ -109,13 +107,13 @@ export function JoinSetup({ code, initialName, sessionTitle = "Study session" }:
           </div>
         </div>
 
-        <div className="flex flex-col">
-          <CardHeader>
-            <p className="font-mono text-xs uppercase tracking-[0.16em] text-primary">Room {code}</p>
-            <CardTitle className="font-display text-3xl font-medium">{sessionTitle}</CardTitle>
-            <CardDescription>Check your name and devices before entering.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1">
+        <div className="flex flex-col bg-background">
+          <div className="border-b px-6 py-8 sm:px-9 sm:py-10">
+            <p className="paper-tape-label inline-block -rotate-1 px-3 py-1 font-mono text-[0.68rem] uppercase tracking-[0.16em]">Room {code}</p>
+            <h1 className="mt-5 font-display text-5xl font-semibold uppercase leading-none">{sessionTitle}</h1>
+            <p className="mt-3 text-sm text-muted-foreground">Check your name and devices before entering.</p>
+          </div>
+          <div className="flex-1 px-6 py-8 sm:px-9">
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="display-name">Display name</FieldLabel>
@@ -137,13 +135,12 @@ export function JoinSetup({ code, initialName, sessionTitle = "Study session" }:
               </Field>
               {permissionError ? <p className="text-sm leading-5 text-destructive">{permissionError}</p> : null}
             </FieldGroup>
-          </CardContent>
-          <CardFooter className="flex-col items-stretch gap-2 border-t bg-muted/50 py-4">
-            <Button size="lg" className="h-11" onClick={joinRoom} disabled={!name.trim()}>Join room</Button>
-            <Button variant="ghost" onClick={() => router.push("/")}>Cancel</Button>
-          </CardFooter>
+          </div>
+          <div className="flex flex-col items-stretch gap-2 border-t bg-muted/50 px-6 py-4 sm:px-9">
+            <Button variant="accent" size="lg" className="h-12 justify-between px-5" onClick={joinRoom} disabled={!name.trim()}>Join room</Button>
+            <Button variant="outline" onClick={() => router.push("/")}>Cancel</Button>
+          </div>
         </div>
-      </div>
-    </Card>
+    </div>
   );
 }

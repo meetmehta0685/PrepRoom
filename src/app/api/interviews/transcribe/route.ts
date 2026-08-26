@@ -57,8 +57,8 @@ export async function POST(request: Request) {
       console.error("Groq transcription failed", response.status);
       const status = response.status === 429 ? 429 : 502;
       const error = response.status === 429
-        ? "Voice transcription has reached its free limit. Type your answer for now."
-        : "The recording could not be transcribed. Try again or type your answer.";
+        ? "Voice transcription is temporarily at capacity. Wait a moment, then record again."
+        : "The recording could not be transcribed. Record your answer again.";
       return NextResponse.json({ error }, { status });
     }
 
@@ -71,6 +71,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ text });
   } catch (error) {
     console.error("Voice transcription request failed", error);
-    return NextResponse.json({ error: "The recording could not be transcribed. Try again or type your answer." }, { status: 502 });
+    return NextResponse.json({ error: "The recording could not be transcribed. Record your answer again." }, { status: 502 });
   }
 }

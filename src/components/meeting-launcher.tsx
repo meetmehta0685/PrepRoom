@@ -7,8 +7,19 @@ import { ArrowRightIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
-export function MeetingLauncher({ signedIn, showCreate = true }: { signedIn: boolean; showCreate?: boolean }) {
+export function MeetingLauncher({
+  signedIn,
+  showCreate = true,
+  className,
+  appearance = "default",
+}: {
+  signedIn: boolean;
+  showCreate?: boolean;
+  className?: string;
+  appearance?: "default" | "run-sheet";
+}) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -51,7 +62,7 @@ export function MeetingLauncher({ signedIn, showCreate = true }: { signedIn: boo
   }
 
   return (
-    <div className="flex max-w-xl flex-col gap-4">
+    <div className={cn("flex max-w-xl flex-col gap-4", className)}>
       <div className="flex flex-col gap-3 sm:flex-row">
         {showCreate ? (
           <Button size="lg" className="h-12 px-5" onClick={createMeeting} disabled={creating}>
@@ -72,7 +83,13 @@ export function MeetingLauncher({ signedIn, showCreate = true }: { signedIn: boo
                   aria-invalid={Boolean(error)}
                   className="h-12 min-w-0 bg-card px-4 font-mono uppercase tracking-wider"
                 />
-                <Button type="submit" variant="outline" size="icon-lg" className="size-12 shrink-0 bg-card" aria-label="Join room">
+                <Button
+                  type="submit"
+                  variant={appearance === "run-sheet" ? "accent" : "outline"}
+                  size="icon-lg"
+                  className="size-12 shrink-0"
+                  aria-label="Join room"
+                >
                   <ArrowRightIcon />
                 </Button>
               </div>

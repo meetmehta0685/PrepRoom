@@ -16,21 +16,27 @@ function initials(name?: string | null) {
     .toUpperCase();
 }
 
-export async function SiteHeader() {
+export async function SiteHeader({ variant = "default" }: { variant?: "default" | "landing" }) {
   const session = await auth();
+  const landing = variant === "landing";
 
   return (
-    <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+    <header
+      className={cn(
+        "flex w-full items-center justify-between",
+        landing ? "h-20 border-b px-14 sm:px-16" : "mx-auto max-w-7xl px-5 py-5 sm:px-8 lg:px-10",
+      )}
+    >
       <Link href="/" className="flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-        <BrandMark />
-        <span className="text-base font-semibold tracking-tight">PrepRoom</span>
+        {landing ? null : <BrandMark />}
+        <span className={cn(landing ? "font-display text-3xl font-semibold uppercase leading-none" : "text-base font-semibold tracking-tight")}>PrepRoom</span>
       </Link>
 
       {session?.user ? (
         <div className="flex items-center gap-3">
-          <div className="hidden text-right sm:block">
+          <div className={cn("hidden text-right sm:block", landing && "font-mono uppercase tracking-[0.1em]")}>
             <p className="text-sm font-medium">{session.user.name}</p>
-            <p className="text-xs text-muted-foreground">Ready to practise</p>
+            <p className="text-xs text-muted-foreground">{landing ? "Run sheet ready" : "Ready to practise"}</p>
           </div>
           <Avatar>
             {session.user.image ? <AvatarImage src={session.user.image} alt="" /> : null}

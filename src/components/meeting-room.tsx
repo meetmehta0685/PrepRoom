@@ -60,14 +60,14 @@ export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId, 
 
   if (error) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[oklch(0.14_0.03_263)] px-5 text-white">
+      <main className="landing-sheet landing-frame flex min-h-screen items-center justify-center px-5">
         <div className="w-full max-w-lg">
-          <Alert className="bg-white text-foreground">
+          <Alert className="border-foreground bg-background text-foreground">
             <RadioIcon />
             <AlertTitle>{error.title}</AlertTitle>
             <AlertDescription>{error.message}</AlertDescription>
           </Alert>
-          <Button variant="secondary" className="mt-4" onClick={() => router.push("/")}>Return home</Button>
+          <Button variant="outline" className="mt-4" onClick={() => router.push("/")}>Return home</Button>
         </div>
       </main>
     );
@@ -75,25 +75,25 @@ export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId, 
 
   if (!connection) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[oklch(0.14_0.03_263)] text-white">
-        <div className="flex items-center gap-3 text-sm text-white/70"><span className="size-2 animate-pulse rounded-full bg-[oklch(0.75_0.18_150)]" />Connecting to {code}</div>
+      <main className="landing-sheet landing-frame flex min-h-screen items-center justify-center">
+        <div className="flex items-center gap-3 border px-5 py-4 font-mono text-[0.68rem] uppercase tracking-[0.16em]"><span className="size-2 animate-pulse rounded-full bg-accent outline outline-1 outline-foreground" />Connecting to {code}</div>
       </main>
     );
   }
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-[oklch(0.14_0.03_263)] text-white">
-      <header className="flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6">
+    <main className="landing-sheet flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <header className="flex h-20 shrink-0 items-center justify-between border-b px-5 sm:px-8">
         <div>
-          <p className="text-sm font-semibold">{sessionLabel}</p>
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.15em] text-white/50">{participantRole ? `${participantRole} · ` : ""}{code}</p>
+          <p className="font-display text-2xl font-semibold uppercase leading-none">{sessionLabel}</p>
+          <p className="mt-1 font-mono text-[0.68rem] uppercase tracking-[0.15em] text-muted-foreground">{participantRole ? `${participantRole} · ` : ""}{code}</p>
         </div>
-        <Button variant="secondary" size="sm" onClick={copyInvite}>
+        <Button variant="outline" size="sm" onClick={copyInvite}>
           <CopyIcon data-icon="inline-start" />
           {copied ? "Copied" : "Copy invite"}
         </Button>
       </header>
-      <div className="min-h-0 flex-1" data-lk-theme="default">
+      <div className="rehearsal-room min-h-0 flex-1 bg-foreground" data-lk-theme="default">
         <LiveKitRoom
           token={connection.token}
           serverUrl={connection.serverUrl}
