@@ -408,13 +408,19 @@ function InterviewReportView({ interviewId, report, track, jobTitle, questionSou
         </Alert>
 
         {!isUnscored ? (
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <Score label="Technical" value={report.technicalScore} />
-            <Score label="Communication" value={report.communicationScore} />
-            <Score label="Problem solving" value={report.problemSolvingScore ?? 0} />
-            <Score label="Role fit" value={report.roleFitScore ?? 0} />
-            <Score label="Resume depth" value={report.resumeDepthScore ?? 0} />
-          </div>
+          <section aria-labelledby="score-ledger-title" className="mt-8 border bg-card">
+            <header className="flex items-end justify-between gap-5 border-b px-5 py-4 sm:px-6">
+              <h2 id="score-ledger-title" className="font-display text-2xl font-medium uppercase">Assessment ledger</h2>
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.12em] text-muted-foreground">Five measures / 100</p>
+            </header>
+            <dl>
+              <ScoreRow label="Technical" value={report.technicalScore} code="S01" />
+              <ScoreRow label="Communication" value={report.communicationScore} code="S02" />
+              <ScoreRow label="Problem solving" value={report.problemSolvingScore ?? 0} code="S03" />
+              <ScoreRow label="Role fit" value={report.roleFitScore ?? 0} code="S04" />
+              <ScoreRow label="Resume depth" value={report.resumeDepthScore ?? 0} code="S05" />
+            </dl>
+          </section>
         ) : null}
 
         <section className="mt-8 border bg-card p-6 sm:p-8">
@@ -512,13 +518,14 @@ function InterviewReportView({ interviewId, report, track, jobTitle, questionSou
   );
 }
 
-function Score({ label, value }: { label: string; value: number }) {
+function ScoreRow({ label, value, code }: { label: string; value: number; code: string }) {
   const band = value >= 90 ? "Exceptional" : value >= 75 ? "Strong" : value >= 60 ? "Developing" : "Needs development";
   return (
-    <div className="border bg-card p-5">
-      <div className="flex items-center justify-between text-sm"><span className="font-semibold">{label}</span><span className="font-mono text-xs text-muted-foreground">{value}/100</span></div>
-      <div className="mt-4 h-2 overflow-hidden border bg-muted"><div className="h-full bg-accent" style={{ width: `${value}%` }} /></div>
-      <p className="mt-3 text-xs text-muted-foreground">{band}</p>
+    <div className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-3 border-b px-5 py-4 last:border-b-0 sm:grid-cols-[4rem_1fr_10rem_5rem] sm:px-6">
+      <span className="font-mono text-[0.65rem] uppercase tracking-[0.12em] text-muted-foreground">{code}</span>
+      <dt className="text-sm font-semibold">{label}</dt>
+      <dd className="hidden text-sm text-muted-foreground sm:block">{band}</dd>
+      <dd className="text-right font-display text-3xl font-medium leading-none tabular-nums">{value}<span className="ml-1 font-mono text-[0.6rem] text-muted-foreground">/100</span></dd>
     </div>
   );
 }

@@ -35,12 +35,12 @@ export function CodeEditor({
   const [plainTextMode, setPlainTextMode] = useState(false);
 
   return (
-    <div className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border bg-[oklch(0.16_0.025_264)] shadow-lg shadow-primary/8">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-white">
+    <div className="w-full min-w-0 max-w-full overflow-hidden border border-foreground bg-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-background/25 px-4 py-3 text-background">
         <div className="flex items-center gap-2">
-          <BracesIcon className="size-4 text-[oklch(0.82_0.13_65)]" />
+          <BracesIcon className="size-4 text-accent" />
           <span className="text-sm font-semibold">Solution</span>
-          <Badge className="border-white/10 bg-white/8 text-white/75">AI reviewed</Badge>
+          <Badge className="border-background/25 bg-background/10 text-background">AI reviewed</Badge>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => setPlainTextMode((current) => !current)} disabled={disabled}>
@@ -48,7 +48,7 @@ export function CodeEditor({
             {plainTextMode ? "Use code editor" : "Use plain text"}
           </Button>
           <Select value={language} onValueChange={(next) => next && onLanguageChange(next as CodeLanguage)} disabled={disabled}>
-            <SelectTrigger className="w-36 border-white/15 bg-white/8 text-white" aria-label="Programming language">
+            <SelectTrigger className="w-36 border-background/25 bg-foreground text-background" aria-label="Programming language">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -66,7 +66,7 @@ export function CodeEditor({
           disabled={disabled}
           aria-label="Plain-text code answer"
           spellCheck={false}
-          className="h-[370px] w-full resize-y bg-[oklch(0.16_0.018_264)] p-5 font-mono text-sm leading-6 text-white outline-none placeholder:text-white/40 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/70"
+          className="h-[370px] w-full resize-y bg-foreground p-5 font-mono text-sm leading-6 text-background outline-none placeholder:text-background/45 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/70"
           placeholder="Write your solution here..."
         />
       ) : (
@@ -76,7 +76,7 @@ export function CodeEditor({
           value={value}
           onChange={(next) => onChange(next ?? "")}
           theme="vs-dark"
-          loading={<div className="flex h-[370px] items-center justify-center text-sm text-white/55">Loading editor...</div>}
+          loading={<div className="flex h-[370px] items-center justify-center font-mono text-xs uppercase tracking-[0.12em] text-background/60">Loading editor</div>}
           options={{
             readOnly: disabled,
             minimap: { enabled: false },

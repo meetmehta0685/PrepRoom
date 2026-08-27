@@ -52,9 +52,9 @@ export function InterviewSetup() {
   }
 
   return (
-    <div className="grid border-b lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[0.78fr_1.22fr]">
+    <div className="grid border-b lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[0.78fr_1.22fr]">
       <aside className="relative overflow-hidden bg-foreground px-6 py-10 text-background sm:px-10 sm:py-12 lg:border-r lg:px-12 lg:py-14">
-        <h1 className="max-w-sm text-balance font-display text-5xl font-semibold uppercase leading-[0.9] tracking-[-0.025em] sm:text-6xl">
+        <h1 className="max-w-md text-balance font-display text-4xl font-semibold leading-[1.02] tracking-[-0.03em] sm:text-5xl">
           Choose who sits across from you.
         </h1>
         <p className="mt-6 max-w-sm text-sm leading-6 text-background/70">
@@ -80,7 +80,7 @@ export function InterviewSetup() {
             />
           ))}
         </div>
-        <p className="mt-12 max-w-52 font-note -rotate-2 text-lg italic leading-5 text-background/80">Pick the person who will keep the pressure useful.</p>
+        <p className="mt-12 max-w-xs text-sm leading-6 text-background/70">Pick the interviewer who will make this practice useful.</p>
       </aside>
 
       <section className="bg-background px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14">

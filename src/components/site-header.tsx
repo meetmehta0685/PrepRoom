@@ -24,19 +24,19 @@ export async function SiteHeader({ variant = "default" }: { variant?: "default" 
     <header
       className={cn(
         "flex w-full items-center justify-between",
-        landing ? "h-20 border-b px-14 sm:px-16" : "mx-auto max-w-7xl px-5 py-5 sm:px-8 lg:px-10",
+        landing ? "h-16 border-b px-5 sm:px-8 lg:px-12" : "mx-auto max-w-7xl border-b px-5 py-4 sm:px-8 lg:px-10",
       )}
     >
-      <Link href="/" className="flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+      <Link href="/" className="flex items-center gap-3 rounded-[var(--radius)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/35">
         {landing ? null : <BrandMark />}
-        <span className={cn(landing ? "font-display text-3xl font-semibold uppercase leading-none" : "text-base font-semibold tracking-tight")}>PrepRoom</span>
+        <span className={cn(landing ? "font-display text-xl font-semibold tracking-[-0.02em]" : "text-base font-semibold tracking-tight")}>PrepRoom</span>
       </Link>
 
       {session?.user ? (
         <div className="flex items-center gap-3">
-          <div className={cn("hidden text-right sm:block", landing && "font-mono uppercase tracking-[0.1em]")}>
+          <div className="hidden text-right sm:block">
             <p className="text-sm font-medium">{session.user.name}</p>
-            <p className="text-xs text-muted-foreground">{landing ? "Run sheet ready" : "Ready to practise"}</p>
+            <p className="text-xs text-muted-foreground">Ready to practise</p>
           </div>
           <Avatar>
             {session.user.image ? <AvatarImage src={session.user.image} alt="" /> : null}

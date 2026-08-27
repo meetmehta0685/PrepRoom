@@ -28,8 +28,8 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --font-sans: "Manrope Variable", sans-serif;
-  --font-display: "League Gothic Variable", sans-serif;
-  --font-note: "Newsreader Variable", serif;
+  --font-display: "Archivo Variable", sans-serif;
+  --font-note: "Archivo Variable", sans-serif;
   --font-mono: "JetBrains Mono Variable", monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -51,25 +51,25 @@
 }
 
 :root {
-  --radius: 0.875rem;
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.035 262);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.035 262);
-  --primary: oklch(0.49 0.205 264);
-  --primary-foreground: oklch(0.985 0.005 260);
-  --secondary: oklch(0.94 0.025 270);
-  --secondary-foreground: oklch(0.25 0.07 265);
-  --muted: oklch(0.955 0.012 264);
-  --muted-foreground: oklch(0.48 0.035 260);
-  --accent: oklch(0.83 0.13 62);
-  --accent-foreground: oklch(0.25 0.045 45);
+  --radius: 0.75rem;
+  --card: #ffffff;
+  --card-foreground: #11151b;
+  --popover: #ffffff;
+  --popover-foreground: #11151b;
+  --primary: #2141d8;
+  --primary-foreground: #ffffff;
+  --secondary: #dde3ea;
+  --secondary-foreground: #11151b;
+  --muted: #e9edf2;
+  --muted-foreground: #596273;
+  --accent: #dfe6ff;
+  --accent-foreground: #16349f;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.89 0.018 264);
-  --input: oklch(0.89 0.018 264);
-  --ring: oklch(0.58 0.18 264);
-  --background: oklch(0.982 0.006 264);
-  --foreground: oklch(0.2 0.035 262);
+  --border: #cbd2dc;
+  --input: #aeb8c6;
+  --ring: #2141d8;
+  --background: #f4f6f8;
+  --foreground: #11151b;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -96,11 +96,12 @@ body {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--primary) 22%, transparent);
+  color: var(--accent-foreground);
+  background: var(--accent);
 }
 
 .font-display {
-  font-family: "League Gothic Variable", sans-serif;
+  font-family: "Archivo Variable", sans-serif;
 }
 
 .font-mono {
@@ -108,36 +109,17 @@ body {
 }
 
 .font-note {
-  font-family: "Newsreader Variable", serif;
+  font-family: "Archivo Variable", sans-serif;
 }
 
 .landing-sheet {
-  --radius: 0.125rem;
-  --background: #f2efe5;
-  --foreground: #151512;
-  --card: #f2efe5;
-  --card-foreground: #151512;
-  --popover: #f2efe5;
-  --popover-foreground: #151512;
-  --primary: #2e55ff;
-  --primary-foreground: #ffffff;
-  --secondary: #ded9cb;
-  --secondary-foreground: #151512;
-  --muted: #e5e0d3;
-  --muted-foreground: #4d4b44;
-  --accent: #dfff45;
-  --accent-foreground: #151512;
-  --border: #151512;
-  --input: #151512;
-  --ring: #2e55ff;
+  --radius: 0.75rem;
   background-color: var(--background);
   color: var(--foreground);
 }
 
 .landing-frame {
   background-color: var(--background);
-  background-image: url("/preproom-paper.png");
-  background-size: 512px 512px;
 }
 
 .landing-sheet :where(a, button, input):focus-visible {
@@ -168,8 +150,7 @@ body {
 .punch-hole,
 .registration-mark,
 .tape-tab {
-  position: absolute;
-  pointer-events: none;
+  display: none;
 }
 
 .punch-hole {

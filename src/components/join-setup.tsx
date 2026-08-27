@@ -75,8 +75,8 @@ export function JoinSetup({ code, initialName, sessionTitle = "Study session" }:
   }
 
   return (
-    <div className="grid border-b lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="relative min-h-[360px] bg-foreground p-4 lg:min-h-[calc(100vh-5rem)] lg:border-r">
+    <div className="grid border-b lg:min-h-[calc(100vh-4rem)] lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="relative min-h-[360px] bg-foreground p-4 lg:min-h-[calc(100vh-4rem)] lg:border-r">
           <video ref={videoRef} autoPlay muted playsInline className={cn("size-full border border-background/20 object-cover", !cameraOn && "invisible")} />
           {!cameraOn ? (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -109,8 +109,8 @@ export function JoinSetup({ code, initialName, sessionTitle = "Study session" }:
 
         <div className="flex flex-col bg-background">
           <div className="border-b px-6 py-8 sm:px-9 sm:py-10">
-            <p className="paper-tape-label inline-block -rotate-1 px-3 py-1 font-mono text-[0.68rem] uppercase tracking-[0.16em]">Room {code}</p>
-            <h1 className="mt-5 font-display text-5xl font-semibold uppercase leading-none">{sessionTitle}</h1>
+            <p className="font-mono text-[0.68rem] tabular-nums text-muted-foreground">Room {code}</p>
+            <h1 className="mt-3 font-display text-4xl font-semibold leading-tight tracking-[-0.03em]">{sessionTitle}</h1>
             <p className="mt-3 text-sm text-muted-foreground">Check your name and devices before entering.</p>
           </div>
           <div className="flex-1 px-6 py-8 sm:px-9">

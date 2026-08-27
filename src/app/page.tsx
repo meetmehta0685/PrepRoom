@@ -1,6 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowRightIcon, BotIcon, MicIcon, UsersIcon } from "lucide-react";
 
 import { auth } from "@/auth";
 import { MeetingLauncher } from "@/components/meeting-launcher";
@@ -8,147 +7,125 @@ import { SiteHeader } from "@/components/site-header";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const cues = [
-  { code: "A01", title: "Resume context", copy: "Backend engineer · payments API", state: "Set" },
-  { code: "A02", title: "Opening question", copy: "Tell me about a scaling trade-off you made.", state: "Asked" },
-  { code: "A03", title: "Candidate answer", copy: "I kept writes synchronous for auditability.", state: "Current" },
-  { code: "A04", title: "Adaptive follow-up", copy: "What failed first as throughput grew?", state: "Next" },
-  { code: "A05", title: "Interview report", copy: "Technical judgment, communication, next practice.", state: "After" },
-];
+const bars = [8, 14, 11, 19, 25, 17, 10, 22, 29, 16, 12, 21, 27, 13, 8, 18, 24, 15, 11, 20, 26, 16, 9, 14, 22, 12, 7, 17, 23, 15, 10, 19, 26, 13, 8, 15, 21, 12, 7, 16, 24, 14, 9, 18, 27, 15, 10, 20];
 
 export default async function Home() {
   const session = await auth();
 
   return (
-    <main className="landing-sheet min-h-screen overflow-x-hidden">
-      <div className="landing-frame relative mx-auto w-full max-w-[96rem] border-x border-b">
-        <span aria-hidden="true" className="punch-hole left-5 top-5" />
-        <span aria-hidden="true" className="punch-hole right-5 top-5" />
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto min-h-screen w-full max-w-[100rem] border-x bg-card">
         <SiteHeader variant="landing" />
 
-        <section className="grid min-h-[37rem] border-b lg:grid-cols-[0.37fr_0.63fr]">
-          <div className="flex min-w-0 flex-col border-b px-6 pb-7 pt-10 sm:px-10 lg:border-b-0 lg:border-r lg:px-12 lg:pb-8 lg:pt-12">
-            <h1 className="max-w-[9ch] font-display text-[clamp(4rem,7.2vw,6rem)] font-semibold leading-[0.84] tracking-[-0.025em] text-balance">
+        <section className="grid border-b px-5 py-10 sm:px-8 sm:py-12 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12 lg:px-12">
+          <div>
+            <h1 className="max-w-[15ch] text-balance font-display text-[clamp(2.8rem,5.2vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.035em]">
               Practise the interview before it counts.
             </h1>
-            <div aria-hidden="true" className="mt-7 h-[3px] w-full max-w-md bg-foreground" />
-            <p className="mt-7 max-w-[36rem] text-base leading-7 sm:text-lg">
+            <p className="mt-5 max-w-[58ch] text-base leading-7 text-muted-foreground sm:text-lg">
               Run a realistic mock interview with AI or invite a peer. Review what worked while it is still practice.
             </p>
-            <div className="mt-auto hidden items-end justify-between gap-8 pt-12 text-xs lg:flex">
-              <div className="flex items-end gap-3">
-                <span className="font-display text-5xl font-semibold leading-none">SC.</span>
-                <span className="font-mono uppercase tracking-[0.14em]">Preparation / 01</span>
+          </div>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:mt-0 lg:min-w-[31rem]">
+            <Link href="/interview/new" className={cn(buttonVariants({ size: "lg" }), "h-14 justify-between px-5 text-base")}>
+              <span className="flex items-center gap-2"><BotIcon data-icon="inline-start" />Start AI interview</span>
+              <ArrowRightIcon data-icon="inline-end" />
+            </Link>
+            <a href="#peer-practice" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-14 justify-between px-5 text-base")}>
+              <span className="flex items-center gap-2"><UsersIcon data-icon="inline-start" />Peer practice</span>
+              <ArrowRightIcon data-icon="inline-end" />
+            </a>
+          </div>
+        </section>
+
+        <section aria-labelledby="canvas-title" className="px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+          <h2 id="canvas-title" className="sr-only">How an AI interview adapts to your answer</h2>
+          <div className="interview-canvas overflow-hidden rounded-2xl border bg-background">
+            <div className="flex items-center justify-between border-b bg-card px-4 py-3 sm:px-5">
+              <div className="flex items-center gap-2 text-sm font-semibold"><span className="size-2 rounded-full bg-primary" />AI interviewer</div>
+              <p className="font-mono text-[0.68rem] tabular-nums text-muted-foreground">Illustrative session · 01:04</p>
+            </div>
+
+            <div className="relative lg:grid lg:grid-cols-[10rem_1fr]">
+              <nav aria-label="Interview mode preview" className="flex border-b bg-card lg:flex-col lg:border-b-0 lg:border-r">
+                <a href="#ai-lane" className="flex flex-1 items-center gap-2 border-r px-4 py-4 text-sm font-semibold text-primary lg:flex-none lg:border-b lg:border-r-0"><BotIcon className="size-4" />AI interviewer</a>
+                <a href="#peer-practice" className="flex flex-1 items-center gap-2 px-4 py-4 text-sm text-muted-foreground lg:flex-none"><UsersIcon className="size-4" />Peer interviewer</a>
+              </nav>
+
+              <div id="ai-lane" className="relative min-w-0">
+                <div className="playhead pointer-events-none absolute bottom-0 left-[48%] top-0 z-10 hidden w-px bg-primary lg:block" aria-hidden="true">
+                  <span className="absolute -left-2.5 top-[46%] flex size-5 items-center justify-center rounded-full bg-primary ring-4 ring-primary/15"><span className="h-2 w-px bg-white" /></span>
+                </div>
+                <TranscriptLane time="00:00" label="AI interviewer" copy="Tell me about a scaling trade-off you made." />
+                <TranscriptLane time="00:31" label="Candidate answer" copy="I kept writes synchronous because the audit trail mattered more than peak throughput. The queue became the first pressure point." active />
+                <TranscriptLane time="01:04" label="Adaptive follow-up" copy="What failed first as throughput grew?" followUp />
               </div>
-              <p className="font-note max-w-36 -rotate-2 text-right text-lg italic leading-5">Practice now. Perform later.</p>
             </div>
-          </div>
 
-          <div className="grid min-w-0 md:grid-cols-2">
-            <p className="bg-accent px-6 py-2 font-mono text-[0.65rem] uppercase tracking-[0.14em] md:hidden">Choose your interviewer</p>
-            <nav aria-label="Interview modes" className="grid grid-cols-2 border-b md:hidden">
-              <a href="#ai-cue" className="border-r px-5 py-4">
-                <span className="font-mono text-[0.62rem] uppercase tracking-[0.14em]">A01</span>
-                <span className="mt-1 block font-display text-2xl uppercase">AI interviewer</span>
-              </a>
-              <a href="#peer-cue" className="px-5 py-4">
-                <span className="font-mono text-[0.62rem] uppercase tracking-[0.14em]">B02</span>
-                <span className="mt-1 block font-display text-2xl uppercase">Peer interviewer</span>
-              </a>
-            </nav>
-            <ModeCue id="ai-cue" code="A01" title="AI interviewer" description="Questions shaped by your resume, target role, and answers." className="border-b md:border-b-0 md:border-r">
-              <Link href="/interview/new" className={cn(buttonVariants({ size: "lg" }), "h-12 w-full justify-between px-5")}>
-                Start AI interview
-                <ArrowRightIcon data-icon="inline-end" />
-              </Link>
-              <ul className="mt-5 grid gap-2 text-sm leading-5">
-                <li>Upload a PDF resume</li>
-                <li>Choose a role and interview track</li>
-                <li>Answer by voice or text</li>
-              </ul>
-            </ModeCue>
-
-            <ModeCue id="peer-cue" code="B02" title="Peer interviewer" description="Open a private room and practise live with someone you trust.">
-              <MeetingLauncher signedIn={Boolean(session?.user)} appearance="run-sheet" className="w-full" />
-            </ModeCue>
+            <div className="grid border-t bg-card sm:grid-cols-[1fr_auto] sm:items-center">
+              <ol className="grid grid-cols-5">
+                {["Context", "Opening", "Answer", "Follow-up", "Report"].map((item, index) => (
+                  <li key={item} className={cn("border-r px-3 py-3 last:border-r-0", index === 2 && "bg-accent")}>
+                    <span className="block font-mono text-[0.62rem] tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="mt-1 block truncate text-xs font-medium sm:text-sm">{item}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="border-t px-4 py-3 text-xs text-muted-foreground sm:border-l sm:border-t-0">The next question follows the candidate.</p>
+            </div>
           </div>
         </section>
 
-        <section aria-labelledby="run-title" className="relative px-6 py-7 sm:px-10 lg:px-12">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 id="run-title" className="font-display text-3xl font-semibold uppercase leading-none tracking-[-0.02em]">One interview run</h2>
-              <p className="mt-2 text-sm">Illustrative path. The real questions follow the candidate.</p>
-            </div>
-            <p className="font-mono text-[0.68rem] uppercase tracking-[0.16em]">Resume → answer → next question → report</p>
+        <section id="peer-practice" className="grid border-t lg:grid-cols-2">
+          <div className="border-b px-5 py-10 sm:px-8 lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
+            <h2 className="font-display text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">Practise with AI.</h2>
+            <p className="mt-3 max-w-[52ch] leading-7 text-muted-foreground">Questions shaped by your resume, target role, and answers. Upload a PDF resume, choose an interview track, then answer by voice or text.</p>
+            <Link href="/interview/new" className={cn(buttonVariants({ size: "lg" }), "mt-7 h-11 px-4")}>Start AI interview<ArrowRightIcon data-icon="inline-end" /></Link>
           </div>
-
-          <div className="overflow-x-auto border-y">
-            <ol className="cue-track grid min-w-[62rem] grid-cols-5">
-              {cues.map((cue, index) => (
-                <li key={cue.code} className={cn("cue-step relative min-h-44 border-r p-4 last:border-r-0", index === 2 && "cue-step-current")}>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className={cn("cue-code font-display text-2xl font-semibold", index < 3 && "bg-accent px-1")}>{cue.code}</span>
-                    <span className="font-note -rotate-2 text-base italic">{cue.state}</span>
-                  </div>
-                  <h3 className="mt-5 font-display text-xl font-semibold uppercase leading-none">{cue.title}</h3>
-                  <p className="mt-3 max-w-[24ch] text-sm leading-5">{cue.copy}</p>
-                  {index < cues.length - 1 ? (
-                    <ArrowRightIcon aria-hidden="true" className="cue-arrow absolute -right-3 top-1/2 z-10 size-6 -translate-y-1/2 bg-background" />
-                  ) : null}
-                  {index === 2 ? (
-                    <Image
-                      src="/preproom-adaptive-note.png"
-                      alt="Next cue adapted from this answer."
-                      width={800}
-                      height={360}
-                      className="adaptive-note absolute -right-16 bottom-1 z-20 h-auto w-40 -rotate-2"
-                    />
-                  ) : null}
-                </li>
-              ))}
-            </ol>
+          <div className="px-5 py-10 sm:px-8 lg:px-12 lg:py-12">
+            <h2 className="font-display text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">Practise with a peer.</h2>
+            <p className="mt-3 max-w-[52ch] leading-7 text-muted-foreground">Open a private room and practise live with someone you trust.</p>
+            <MeetingLauncher signedIn={Boolean(session?.user)} appearance="run-sheet" className="mt-7 max-w-2xl" />
           </div>
         </section>
 
-        <footer className="flex flex-col gap-2 border-t px-6 py-5 text-xs sm:flex-row sm:items-center sm:justify-between sm:px-10 lg:px-12">
-          <p className="font-mono uppercase tracking-[0.14em]">PrepRoom · AI and peer mock interviews</p>
-          <p>Private interview material. Clear next practice.</p>
+        <footer className="flex flex-col gap-2 border-t px-5 py-5 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
+          <p className="font-semibold text-foreground">PrepRoom</p>
+          <p>AI and peer mock interviews. Private interview material.</p>
         </footer>
-
-        <span aria-hidden="true" className="registration-mark bottom-3 left-3" />
-        <span aria-hidden="true" className="registration-mark bottom-3 right-3" />
       </div>
     </main>
   );
 }
 
-function ModeCue({
-  id,
-  code,
-  title,
-  description,
-  className,
-  children,
-}: {
-  id: string;
-  code: string;
-  title: string;
-  description: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
+function TranscriptLane({ time, label, copy, active = false, followUp = false }: { time: string; label: string; copy: string; active?: boolean; followUp?: boolean }) {
   return (
-    <article id={id} className={cn("mode-cue relative flex min-h-[31rem] min-w-0 scroll-mt-4 flex-col px-6 pb-8 pt-12 sm:px-8 lg:min-h-[37rem]", className)}>
-      <span aria-hidden="true" className="tape-tab left-8 top-5" />
-      <div>
-        <h2 className="font-display text-4xl font-semibold uppercase leading-none tracking-[-0.02em] sm:text-5xl">{title}</h2>
-        <p className="mt-4 max-w-[31ch] text-base leading-6">{description}</p>
+    <article className={cn("relative grid min-h-36 border-b bg-card last:border-b-0 sm:grid-cols-[5rem_12rem_1fr]", active && "bg-accent/45")}>
+      <time className="border-b px-4 py-4 font-mono text-[0.68rem] tabular-nums text-muted-foreground sm:border-b-0 sm:border-r">{time}</time>
+      <div className="border-b px-4 py-4 sm:border-b-0 sm:border-r">
+        <p className={cn("text-sm font-semibold", followUp && "text-primary")}>{label}</p>
+        {active ? <Waveform /> : null}
       </div>
-      <div className="mode-code-frame relative my-8 flex flex-1 items-center justify-center border-y">
-        <span className="font-display text-[clamp(5rem,9vw,8.5rem)] font-semibold leading-none tracking-[0.08em]">{code}</span>
+      <div className="relative flex min-w-0 items-center px-4 py-5 sm:px-6">
+        <p className={cn("max-w-[66ch] text-base leading-7", followUp && "text-lg font-semibold text-primary")}>{copy}</p>
+        {followUp ? (
+          <svg aria-hidden="true" viewBox="0 0 160 72" className="absolute -top-9 right-6 hidden h-20 w-40 overflow-visible text-primary lg:block">
+            <path d="M8 8 C 82 8, 62 60, 150 60" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="5 5" />
+            <circle cx="8" cy="8" r="4" fill="currentColor" />
+            <path d="m143 54 7 6-8 4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        ) : null}
       </div>
-      <div>{children}</div>
     </article>
+  );
+}
+
+function Waveform() {
+  return (
+    <div aria-hidden="true" className="mt-4 flex h-8 items-center gap-[2px] overflow-hidden text-primary">
+      <MicIcon className="mr-2 size-4 shrink-0" />
+      {bars.map((height, index) => <span key={index} className="w-px shrink-0 bg-current" style={{ height }} />)}
+    </div>
   );
 }
