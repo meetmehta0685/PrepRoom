@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["preproom"]
 }
 
 model Account {
@@ -24,6 +25,7 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
+  @@schema("preproom")
 }
 
 model Session {
@@ -34,6 +36,7 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
+  @@schema("preproom")
 }
 
 model User {
@@ -48,6 +51,7 @@ model User {
   interviews    InterviewSession[] @relation("CandidateInterviews")
 
   @@map("users")
+  @@schema("preproom")
 }
 
 model VerificationToken {
@@ -56,6 +60,7 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+  @@schema("preproom")
   @@map("verification_tokens")
 }
 
@@ -72,11 +77,14 @@ model Meeting {
 
   @@index([createdById])
   @@map("meetings")
+  @@schema("preproom")
 }
 
 enum InterviewMode {
   AI
   PEER
+
+  @@schema("preproom")
 }
 
 enum InterviewTrack {
@@ -86,28 +94,38 @@ enum InterviewTrack {
   DSA
   SYSTEM_DESIGN
   BEHAVIORAL
+
+  @@schema("preproom")
 }
 
 enum ExperienceLevel {
   ENTRY
   MID
   SENIOR
+
+  @@schema("preproom")
 }
 
 enum InterviewStatus {
   ACTIVE
   COMPLETED
   ABANDONED
+
+  @@schema("preproom")
 }
 
 enum InterviewMessageRole {
   INTERVIEWER
   CANDIDATE
+
+  @@schema("preproom")
 }
 
 enum InterviewQuestionType {
   TEXT
   CODE
+
+  @@schema("preproom")
 }
 
 model InterviewSession {
@@ -131,6 +149,7 @@ model InterviewSession {
 
   @@index([candidateId, createdAt])
   @@map("interview_sessions")
+  @@schema("preproom")
 }
 
 model InterviewMessage {
@@ -145,6 +164,7 @@ model InterviewMessage {
 
   @@index([interviewId, createdAt])
   @@map("interview_messages")
+  @@schema("preproom")
 }
 
 model InterviewReport {
@@ -167,6 +187,7 @@ model InterviewReport {
   createdAt           DateTime                  @default(now())
 
   @@map("interview_reports")
+  @@schema("preproom")
 }
 
 model InterviewQuestionReview {
@@ -186,4 +207,5 @@ model InterviewQuestionReview {
 
   @@unique([reportId, questionNumber])
   @@map("interview_question_reviews")
+  @@schema("preproom")
 }

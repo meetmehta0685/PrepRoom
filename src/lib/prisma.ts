@@ -1,9 +1,9 @@
-import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
 
 const fallbackUrl = "postgresql://preproom:preproom@localhost:5432/preproom";
-const adapter = new PrismaNeon({
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL ?? fallbackUrl,
 });
 

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { createOpeningQuestion } from "@/lib/ai-interviewer";
+import { hasDatabase } from "@/lib/config";
 import { experienceLevelValues, interviewTrackValues, trackLabel } from "@/lib/interviews";
 import { prisma } from "@/lib/prisma";
 import { parseResume } from "@/lib/resume";
@@ -23,6 +24,12 @@ export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sign in before starting an interview." }, { status: 401 });
+  }
+  if (!hasDatabase) {
+    return NextResponse.json(
+      { error: "Interview storage is not configured. Add DATABASE_URL to .env.local, then restart the app." },
+      { status: 503 },
+    );
   }
 
   let form: FormData;
