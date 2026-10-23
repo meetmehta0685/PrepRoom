@@ -65,6 +65,7 @@ function normalizeCallbackUrl(value?: string) {
 
 function describeDestination(callbackUrl: string) {
   if (callbackUrl.startsWith("/interview/new")) return "AI interview setup";
+  if (callbackUrl.startsWith("/interviews")) return "My interviews";
   if (callbackUrl.startsWith("/join/") || callbackUrl.startsWith("/room/")) return "Peer interview room";
   return "PrepRoom home";
 }
