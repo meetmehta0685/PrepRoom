@@ -1,9 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CopyIcon, RadioIcon } from "lucide-react";
-import { LiveKitRoom, RoomAudioRenderer, VideoConference } from "@livekit/components-react";
+import {
+  Chat,
+  ConnectionStateToast,
+  ControlBar,
+  LayoutContextProvider,
+  LiveKitRoom,
+  ParticipantTile,
+  RoomAudioRenderer,
+  TrackLoop,
+  useCreateLayoutContext,
+  useGridLayout,
+  useTracks,
+} from "@livekit/components-react";
+import { getTrackReferenceId, type WidgetState } from "@livekit/components-core";
+import { RoomEvent, Track } from "livekit-client";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -103,10 +117,76 @@ export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId, 
           onDisconnected={() => router.push("/")}
           className="h-full"
         >
-          <VideoConference />
-          <RoomAudioRenderer />
+          <SafeVideoConference />
         </LiveKitRoom>
       </div>
     </main>
+  );
+}
+
+/**
+ * LiveKit's VideoConference paginator can race when a camera publication is
+ * replaced by its placeholder. Render the live track list directly so a
+ * camera toggle cannot leave the visual-stability array out of sync.
+ */
+function SafeVideoConference() {
+  const gridRef = useRef<HTMLDivElement>(null!);
+  const [widgetState, setWidgetState] = useState<WidgetState>({ showChat: false, unreadMessages: 0, showSettings: false });
+  const tracks = useTracks(
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
+    { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false },
+  );
+  const layoutContext = useCreateLayoutContext();
+  useGridLayout(gridRef, tracks.length);
+
+  const pinnedTrack = layoutContext.pin.state?.[0];
+  const focusedTrack = pinnedTrack
+    ? tracks.find(
+        (track) =>
+          track.participant.identity === pinnedTrack.participant.identity &&
+          track.source === pinnedTrack.source,
+      )
+    : undefined;
+
+  return (
+    <div className="lk-video-conference">
+      <LayoutContextProvider value={layoutContext} onWidgetChange={setWidgetState}>
+        <div className="lk-video-conference-inner">
+          {focusedTrack ? (
+            <div className="lk-focus-layout-wrapper">
+              <div className="lk-focus-layout">
+                <div className="lk-carousel" data-lk-orientation="vertical">
+                  {tracks
+                    .filter(
+                      (track) =>
+                        track.participant.identity !== focusedTrack.participant.identity ||
+                        track.source !== focusedTrack.source,
+                    )
+                    .map((track) => (
+                      <ParticipantTile trackRef={track} key={getTrackReferenceId(track)} />
+                    ))}
+                </div>
+                <ParticipantTile trackRef={focusedTrack} />
+              </div>
+            </div>
+          ) : (
+            <div className="lk-grid-layout-wrapper">
+              <div ref={gridRef} className="lk-grid-layout">
+                <TrackLoop tracks={tracks}>
+                  <ParticipantTile />
+                </TrackLoop>
+              </div>
+            </div>
+          )}
+          <ControlBar controls={{ chat: true, settings: false }} />
+        </div>
+        <Chat style={{ display: widgetState.showChat ? "grid" : "none" }} />
+      </LayoutContextProvider>
+      <ConnectionStateToast />
+      <RoomAudioRenderer />
+    </div>
   );
 }
