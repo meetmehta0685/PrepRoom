@@ -52,7 +52,8 @@ function resolveCodeLanguage(value?: string | null): CodeLanguage {
   return value && codeLanguageValues.includes(value as CodeLanguage) ? value as CodeLanguage : "javascript";
 }
 
-export function AiInterviewRoom({ interview }: {
+export function AiInterviewRoom({ interview, siteHeader }: {
+  siteHeader?: React.ReactNode;
   interview: {
     id: string;
     track: InterviewTrackValue;
@@ -283,11 +284,12 @@ export function AiInterviewRoom({ interview }: {
   }
 
   if (report) {
-    return <InterviewReportView interviewId={interview.id} report={report} track={interview.track} jobTitle={interview.jobTitle} questionSources={questionSources} />;
+    return <InterviewReportView siteHeader={siteHeader} interviewId={interview.id} report={report} track={interview.track} jobTitle={interview.jobTitle} questionSources={questionSources} />;
   }
 
   return (
     <main className="landing-sheet min-h-screen overflow-x-hidden bg-background text-foreground">
+      {siteHeader ? <div className="bg-card">{siteHeader}</div> : null}
       <header className="flex h-20 items-center justify-between border-b px-5 sm:px-8">
         <div>
           <p className="font-display text-2xl font-semibold uppercase leading-none">{interview.jobTitle}</p>
@@ -301,7 +303,7 @@ export function AiInterviewRoom({ interview }: {
         </div>
       </header>
 
-      <div className="grid min-h-[calc(100vh-5rem)] w-full min-w-0 lg:grid-cols-[0.9fr_1.1fr]">
+      <div className={cn("grid w-full", siteHeader ? "min-h-[calc(100vh-9rem)]" : "min-h-[calc(100vh-5rem)]", "min-w-0 lg:grid-cols-[0.9fr_1.1fr]")}>
         <section className="relative flex min-h-[430px] min-w-0 flex-col items-center justify-center overflow-hidden border-b bg-foreground px-6 py-14 text-center text-background lg:border-b-0 lg:border-r">
           <div className="relative flex size-28 items-center justify-center border border-background/35 bg-accent text-accent-foreground">
             <BotIcon className="size-10" />
@@ -447,14 +449,16 @@ export function AiInterviewRoom({ interview }: {
   );
 }
 
-function InterviewReportView({ interviewId, report, track, jobTitle, questionSources }: { interviewId: string; report: InterviewReport; track: InterviewTrackValue; jobTitle: string; questionSources: QuestionSourceCounts }) {
+function InterviewReportView({ siteHeader, interviewId, report, track, jobTitle, questionSources }: { siteHeader?: React.ReactNode; interviewId: string; report: InterviewReport; track: InterviewTrackValue; jobTitle: string; questionSources: QuestionSourceCounts }) {
   const hasDetailedReviews = report.questionReviews?.length > 0;
   const isUnscored = report.isBaseline ?? false;
   const questionSourceText = questionSources.practice > 0
     ? `${questionSources.ai} AI-generated and ${questionSources.practice} curated practice ${questionSources.practice === 1 ? "question" : "questions"}`
     : `${questionSources.ai} AI-generated ${questionSources.ai === 1 ? "question" : "questions"}`;
   return (
-    <main className="landing-sheet landing-frame min-h-screen px-5 py-8 sm:px-8 sm:py-12">
+    <main className="landing-sheet landing-frame min-h-screen">
+      {siteHeader ? <div className="bg-card">{siteHeader}</div> : null}
+      <div className="px-5 py-8 sm:px-8 sm:py-12">
       <div className="mx-auto max-w-6xl">
         <section className="border bg-foreground px-6 py-8 text-background sm:px-10 sm:py-10">
           <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
@@ -591,8 +595,9 @@ function InterviewReportView({ interviewId, report, track, jobTitle, questionSou
             <RotateCcwIcon data-icon="inline-start" />
             Start another interview
           </Link>
-          <Link href="/" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>Return home</Link>
+          <Link href="/interviews" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>All my interviews</Link>
         </div>
+      </div>
       </div>
     </main>
   );

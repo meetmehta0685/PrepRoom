@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOutIcon } from "lucide-react";
+import { HistoryIcon, LogOutIcon } from "lucide-react";
 
 import { auth, signOut } from "@/auth";
 import { BrandMark } from "@/components/brand-mark";
@@ -34,6 +34,10 @@ export async function SiteHeader({ variant = "default" }: { variant?: "default" 
 
       {session?.user ? (
         <div className="flex items-center gap-3">
+          <Link href="/interviews" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "px-3")}>
+            <HistoryIcon data-icon="inline-start" />
+            My interviews
+          </Link>
           <div className="hidden text-right sm:block">
             <p className="text-sm font-medium">{session.user.name}</p>
             <p className="text-xs text-muted-foreground">Ready to practise</p>

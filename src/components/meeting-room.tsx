@@ -21,6 +21,7 @@ import { RoomEvent, Track } from "livekit-client";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { EndRoomButton } from "@/components/end-room-button";
 
 type TokenResponse = { token: string; serverUrl: string };
 type JoinError = { title: string; message: string };
@@ -30,7 +31,7 @@ type TokenErrorResponse = {
   setupRequired?: boolean;
 };
 
-export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId, sessionLabel = "Study session", participantRole }: { code: string; name: string; audio: boolean; video: boolean; microphoneId?: string; cameraId?: string; sessionLabel?: string; participantRole?: string }) {
+export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId, sessionLabel = "Study session", participantRole, canEnd = false }: { code: string; name: string; audio: boolean; video: boolean; microphoneId?: string; cameraId?: string; sessionLabel?: string; participantRole?: string; canEnd?: boolean }) {
   const router = useRouter();
   const [connection, setConnection] = useState<TokenResponse>();
   const [error, setError] = useState<JoinError>();
@@ -102,10 +103,13 @@ export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId, 
           <p className="font-display text-2xl font-semibold uppercase leading-none">{sessionLabel}</p>
           <p className="mt-1 font-mono text-[0.68rem] uppercase tracking-[0.15em] text-muted-foreground">{participantRole ? `${participantRole} · ` : ""}{code}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={copyInvite}>
-          <CopyIcon data-icon="inline-start" />
-          {copied ? "Copied" : "Copy invite"}
-        </Button>
+        <div className="flex items-start gap-2">
+          <Button variant="outline" size="sm" onClick={copyInvite}>
+            <CopyIcon data-icon="inline-start" />
+            {copied ? "Copied" : "Copy invite"}
+          </Button>
+          {canEnd ? <EndRoomButton code={code} redirectTo="/interviews" /> : null}
+        </div>
       </header>
       <div className="rehearsal-room min-h-0 flex-1 bg-foreground" data-lk-theme="default">
         <LiveKitRoom
@@ -114,7 +118,7 @@ export function MeetingRoom({ code, name, audio, video, microphoneId, cameraId, 
           connect
           audio={audio ? (microphoneId ? { deviceId: microphoneId } : true) : false}
           video={video ? (cameraId ? { deviceId: cameraId } : true) : false}
-          onDisconnected={() => router.push("/")}
+          onDisconnected={() => router.push(canEnd ? "/interviews" : "/")}
           className="h-full"
         >
           <SafeVideoConference />

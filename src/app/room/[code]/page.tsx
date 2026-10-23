@@ -26,10 +26,12 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
 
   let sessionLabel = "Study session";
   let participantRole: string | undefined;
+  let canEnd = false;
   if (hasDatabase) {
     const meeting = await prisma.meeting.findUnique({ where: { code: normalizedCode }, include: { interview: true } });
     if (meeting) {
       sessionLabel = meeting.title;
+      canEnd = meeting.createdById === session.user.id && !meeting.endedAt;
       if (meeting.interview) {
         sessionLabel = `${trackLabel(meeting.interview.track as InterviewTrackValue)} · ${levelLabel(meeting.interview.level as ExperienceLevelValue)}`;
         participantRole = meeting.interview.candidateId === session.user.id ? "Candidate" : "Peer interviewer";
@@ -47,6 +49,7 @@ export default async function RoomPage({ params, searchParams }: { params: Promi
       cameraId={query.camera}
       sessionLabel={sessionLabel}
       participantRole={participantRole}
+      canEnd={canEnd}
     />
   );
 }

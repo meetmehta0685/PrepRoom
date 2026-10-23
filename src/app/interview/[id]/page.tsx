@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AiInterviewRoom } from "@/components/ai-interview-room";
+import { SiteHeader } from "@/components/site-header";
 import { countInterviewQuestionSources } from "@/lib/ai-interviewer";
 import type { ExperienceLevelValue, InterviewTrackValue } from "@/lib/interviews";
 import { prisma } from "@/lib/prisma";
@@ -36,6 +37,7 @@ export default async function InterviewPage({ params }: { params: Promise<{ id: 
 
   return (
     <AiInterviewRoom
+      siteHeader={<SiteHeader variant="landing" />}
       interview={{
         id: interview.id,
         track: interview.track as InterviewTrackValue,
