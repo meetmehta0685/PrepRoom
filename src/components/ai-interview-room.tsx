@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRightIcon, BotIcon, CheckIcon, Code2Icon, DownloadIcon, LightbulbIcon, MicIcon, MicOffIcon, MinusCircleIcon, RotateCcwIcon, Volume2Icon } from "lucide-react";
+import { ArrowRightIcon, BotIcon, CheckIcon, Code2Icon, DownloadIcon, KeyboardIcon, LightbulbIcon, MicIcon, MicOffIcon, MinusCircleIcon, RotateCcwIcon, Volume2Icon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +76,7 @@ export function AiInterviewRoom({ interview }: {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [questionSources, setQuestionSources] = useState(interview.questionSources);
+  const [answerMode, setAnswerMode] = useState<"voice" | "text">("voice");
   const recorderRef = useRef<MediaRecorder | undefined>(undefined);
   const streamRef = useRef<MediaStream | undefined>(undefined);
   const recordingTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -83,6 +84,8 @@ export function AiInterviewRoom({ interview }: {
   const questionsAnswered = messages.filter((message) => message.role === "CANDIDATE").length;
   const currentQuestion = useMemo(() => [...messages].reverse().find((message) => message.role === "INTERVIEWER"), [messages]);
   const isCodingQuestion = currentQuestion?.questionType === "CODE";
+  // The last answer was saved but the next question or report was not created.
+  const awaitingNextStep = messages.at(-1)?.role === "CANDIDATE";
 
   useEffect(() => {
     return () => {
@@ -180,6 +183,47 @@ export function AiInterviewRoom({ interview }: {
     }
   }
 
+  type AnswerResult = {
+    completed?: boolean;
+    question?: InterviewMessage;
+    report?: InterviewReport;
+    provider?: "groq" | "practice";
+    answerSaved?: boolean;
+    error?: string;
+  };
+
+  function applyNextStep(result: AnswerResult) {
+    if (result.question) {
+      const question = result.question;
+      setMessages((current) => [...current, question]);
+      setCodeLanguage(resolveCodeLanguage(question.codeLanguage));
+      setQuestionSources((current) => ({
+        ai: current.ai + (result.provider === "groq" ? 1 : 0),
+        practice: current.practice + (result.provider === "practice" ? 1 : 0),
+      }));
+    }
+    if (result.completed && result.report) {
+      setReport(result.report);
+    } else {
+      setFeedback(candidateSafeAnswerFeedback);
+      window.setTimeout(() => {
+        if (result.question && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(new SpeechSynthesisUtterance(result.question.content));
+        }
+      }, 250);
+    }
+  }
+
+  async function postAnswer(body: object) {
+    const response = await fetch(`/api/interviews/${interview.id}/answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return { ok: response.ok, result: (await response.json()) as AnswerResult };
+  }
+
   async function submitAnswer() {
     const submittedAnswer = answer.trim();
     if (submittedAnswer.length < 2) return;
@@ -187,56 +231,50 @@ export function AiInterviewRoom({ interview }: {
     setSubmitting(true);
     setError("");
     setFeedback("");
+    const candidateMessage: InterviewMessage = {
+      id: crypto.randomUUID(),
+      role: "CANDIDATE",
+      content: submittedAnswer,
+      questionType: currentQuestion?.questionType ?? "TEXT",
+      codeLanguage: isCodingQuestion ? codeLanguage : null,
+    };
     try {
-      const response = await fetch(`/api/interviews/${interview.id}/answer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          answer: submittedAnswer,
-          questionType: currentQuestion?.questionType ?? "TEXT",
-          codeLanguage: isCodingQuestion ? codeLanguage : null,
-        }),
+      const { ok, result } = await postAnswer({
+        answer: submittedAnswer,
+        questionType: currentQuestion?.questionType ?? "TEXT",
+        codeLanguage: isCodingQuestion ? codeLanguage : null,
       });
-      const result = (await response.json()) as {
-        completed?: boolean;
-        question?: InterviewMessage;
-        report?: InterviewReport;
-        provider?: "groq" | "practice";
-        error?: string;
-      };
 
-      if (!response.ok) {
+      if (!ok) {
+        // The answer reached the database, so move to the "continue" state instead of asking for it again.
+        if (result.answerSaved) {
+          setMessages((current) => [...current, candidateMessage]);
+          setAnswer("");
+        }
         setError(result.error ?? "The interviewer could not respond.");
         return;
       }
 
-      const candidateMessage: InterviewMessage = {
-        id: crypto.randomUUID(),
-        role: "CANDIDATE",
-        content: submittedAnswer,
-        questionType: currentQuestion?.questionType ?? "TEXT",
-        codeLanguage: isCodingQuestion ? codeLanguage : null,
-      };
-      setMessages((current) => result.question ? [...current, candidateMessage, result.question] : [...current, candidateMessage]);
+      setMessages((current) => [...current, candidateMessage]);
       setAnswer("");
-      if (result.question) {
-        setCodeLanguage(resolveCodeLanguage(result.question.codeLanguage));
-        setQuestionSources((current) => ({
-          ai: current.ai + (result.provider === "groq" ? 1 : 0),
-          practice: current.practice + (result.provider === "practice" ? 1 : 0),
-        }));
+      applyNextStep(result);
+    } catch {
+      setError("The interviewer could not respond. Check your connection and try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function continueInterview() {
+    setSubmitting(true);
+    setError("");
+    try {
+      const { ok, result } = await postAnswer({ continue: true });
+      if (!ok) {
+        setError(result.error ?? "The interviewer could not respond. Try again in a moment.");
+        return;
       }
-      if (result.completed && result.report) {
-        setReport(result.report);
-      } else {
-        setFeedback(candidateSafeAnswerFeedback);
-        window.setTimeout(() => {
-          if (result.question && "speechSynthesis" in window) {
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(result.question.content));
-          }
-        }, 250);
-      }
+      applyNextStep(result);
     } catch {
       setError("The interviewer could not respond. Check your connection and try again.");
     } finally {
@@ -259,7 +297,7 @@ export function AiInterviewRoom({ interview }: {
         </div>
         <div className="flex items-center gap-2">
           {isCodingQuestion ? <Badge variant="outline"><Code2Icon data-icon="inline-start" />Coding question</Badge> : null}
-          <Badge variant="outline">Question {Math.min(questionsAnswered + 1, 5)} of 5</Badge>
+          <Badge variant="outline">Question {Math.min(awaitingNextStep ? questionsAnswered : questionsAnswered + 1, 5)} of 5</Badge>
         </div>
       </header>
 
@@ -307,7 +345,15 @@ export function AiInterviewRoom({ interview }: {
               </Alert>
             ) : null}
 
-            {isCodingQuestion ? (
+            {awaitingNextStep ? (
+              <div className="flex min-h-[260px] flex-col items-center justify-center border bg-card p-6 text-center sm:min-h-[330px]">
+                <CheckIcon className="mb-4 size-8" aria-hidden="true" />
+                <p className="font-medium text-foreground">Your answer to question {questionsAnswered} is saved.</p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
+                  The interviewer did not respond in time. Continue to {questionsAnswered >= 5 ? "generate your report" : "get the next question"}. Your answer does not need to be repeated.
+                </p>
+              </div>
+            ) : isCodingQuestion ? (
               <CodeEditor
                 value={answer}
                 language={codeLanguage}
@@ -315,6 +361,19 @@ export function AiInterviewRoom({ interview }: {
                 onLanguageChange={setCodeLanguage}
                 disabled={submitting}
               />
+            ) : answerMode === "text" ? (
+              <div>
+                <label htmlFor="typed-answer" className="sr-only">Typed answer</label>
+                <textarea
+                  id="typed-answer"
+                  value={answer}
+                  onChange={(event) => setAnswer(event.target.value)}
+                  disabled={submitting}
+                  maxLength={12_000}
+                  placeholder="Type your answer. Structure it the way you would say it out loud."
+                  className="min-h-[260px] w-full resize-y border border-input bg-card p-5 text-sm leading-7 outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/35 disabled:opacity-50 sm:min-h-[330px]"
+                />
+              </div>
             ) : (
               <div>
                 <div
@@ -328,7 +387,7 @@ export function AiInterviewRoom({ interview }: {
                     <div className="flex min-h-[218px] flex-col items-center justify-center text-center text-muted-foreground sm:min-h-[288px]">
                       <MicIcon className="mb-4 size-8" aria-hidden="true" />
                       <p className="font-medium text-foreground">Record your answer with the microphone.</p>
-                      <p className="mt-1 max-w-sm text-xs leading-5">Your transcript appears here for review. Keyboard entry is disabled for interview answers.</p>
+                      <p className="mt-1 max-w-sm text-xs leading-5">Your transcript appears here for review. If your microphone is unavailable, type your answer instead.</p>
                     </div>
                   )}
                 </div>
@@ -346,20 +405,41 @@ export function AiInterviewRoom({ interview }: {
             {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
           </div>
           <div className="border-t bg-card px-6 py-4 sm:px-10">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              {isCodingQuestion ? (
-                <p className="text-xs leading-5 text-muted-foreground">Code runs only through AI review in this version. An isolated execution runner comes next.</p>
-              ) : (
-                <Button variant={recording ? "destructive" : "outline"} onClick={toggleRecording} disabled={submitting || transcribing}>
-                  {recording ? <MicOffIcon data-icon="inline-start" /> : <MicIcon data-icon="inline-start" />}
-                  {recording ? "Stop and transcribe" : transcribing ? "Transcribing answer" : answer ? "Record more" : "Record answer"}
+            {awaitingNextStep ? (
+              <div className="flex justify-end">
+                <Button size="lg" onClick={continueInterview} disabled={submitting}>
+                  {submitting ? (questionsAnswered >= 5 ? "Preparing report" : "Preparing next question") : "Continue interview"}
+                  {!submitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
                 </Button>
-              )}
-              <Button size="lg" onClick={submitAnswer} disabled={submitting || recording || transcribing || answer.trim().length < 2}>
-                {submitting ? (questionsAnswered === 4 ? "Preparing report" : "Preparing next question") : questionsAnswered === 4 ? "Finish interview" : "Submit answer"}
-                {!submitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
-              </Button>
-            </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {isCodingQuestion ? (
+                  <p className="text-xs leading-5 text-muted-foreground">Code runs only through AI review in this version. An isolated execution runner comes next.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {answerMode === "voice" ? (
+                      <Button variant={recording ? "destructive" : "outline"} onClick={toggleRecording} disabled={submitting || transcribing}>
+                        {recording ? <MicOffIcon data-icon="inline-start" /> : <MicIcon data-icon="inline-start" />}
+                        {recording ? "Stop and transcribe" : transcribing ? "Transcribing answer" : answer ? "Record more" : "Record answer"}
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="ghost"
+                      onClick={() => { setAnswerMode((mode) => mode === "voice" ? "text" : "voice"); setError(""); }}
+                      disabled={submitting || recording || transcribing}
+                    >
+                      {answerMode === "voice" ? <KeyboardIcon data-icon="inline-start" /> : <MicIcon data-icon="inline-start" />}
+                      {answerMode === "voice" ? "Type instead" : "Answer by voice"}
+                    </Button>
+                  </div>
+                )}
+                <Button size="lg" onClick={submitAnswer} disabled={submitting || recording || transcribing || answer.trim().length < 2}>
+                  {submitting ? (questionsAnswered === 4 ? "Preparing report" : "Preparing next question") : questionsAnswered === 4 ? "Finish interview" : "Submit answer"}
+                  {!submitting ? <ArrowRightIcon data-icon="inline-end" /> : null}
+                </Button>
+              </div>
+            )}
           </div>
         </section>
       </div>
