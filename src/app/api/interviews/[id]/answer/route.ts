@@ -6,11 +6,16 @@ import { candidateSafeAnswerFeedback, codeLanguageValues, createInterviewReport,
 import type { ExperienceLevelValue, InterviewTrackValue } from "@/lib/interviews";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
 const answerSchema = z.object({
   answer: z.string().trim().min(2).max(12_000),
   questionType: z.enum(["TEXT", "CODE"]),
   codeLanguage: z.enum(codeLanguageValues).nullable(),
 });
+// Resumes an interview whose last answer was saved but whose next step failed.
+const continueSchema = z.object({ continue: z.literal(true) });
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -18,8 +23,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Sign in to continue the interview." }, { status: 401 });
   }
 
-  const parsed = answerSchema.safeParse(await request.json());
-  if (!parsed.success) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "The answer could not be read." }, { status: 400 });
+  }
+
+  const resume = continueSchema.safeParse(body).success;
+  const parsed = answerSchema.safeParse(body);
+  if (!resume && !parsed.success) {
     return NextResponse.json({ error: "Give an answer before continuing." }, { status: 400 });
   }
 
@@ -37,22 +50,37 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "This interview is no longer active." }, { status: 409 });
   }
 
+  const lastMessage = interview.messages.at(-1);
+  const awaitingNextStep = lastMessage?.role === "CANDIDATE";
+  if (resume && !awaitingNextStep) {
+    return NextResponse.json({ error: "There is no saved answer waiting. Answer the current question." }, { status: 409 });
+  }
+  if (!resume && awaitingNextStep) {
+    return NextResponse.json({ error: "Your previous answer is saved. Continue the interview before answering again.", answerSaved: true }, { status: 409 });
+  }
+
+  let answerSaved = resume;
   try {
-    const currentQuestion = [...interview.messages].reverse().find((message) => message.role === "INTERVIEWER");
-    if (!currentQuestion || currentQuestion.questionType !== parsed.data.questionType) {
-      return NextResponse.json({ error: "The interview question changed. Reload before submitting." }, { status: 409 });
+    const messages = [...interview.messages];
+    if (!resume && parsed.success) {
+      const currentQuestion = [...messages].reverse().find((message) => message.role === "INTERVIEWER");
+      if (!currentQuestion || currentQuestion.questionType !== parsed.data.questionType) {
+        return NextResponse.json({ error: "The interview question changed. Reload before submitting." }, { status: 409 });
+      }
+
+      messages.push(await prisma.interviewMessage.create({
+        data: {
+          interviewId: id,
+          role: "CANDIDATE",
+          content: parsed.data.answer,
+          questionType: currentQuestion.questionType,
+          codeLanguage: currentQuestion.questionType === "CODE" ? parsed.data.codeLanguage : null,
+        },
+      }));
+      answerSaved = true;
     }
 
-    const candidateMessage = await prisma.interviewMessage.create({
-      data: {
-        interviewId: id,
-        role: "CANDIDATE",
-        content: parsed.data.answer,
-        questionType: currentQuestion.questionType,
-        codeLanguage: currentQuestion.questionType === "CODE" ? parsed.data.codeLanguage : null,
-      },
-    });
-    const turns = [...interview.messages, candidateMessage].map((message) => ({
+    const turns = messages.map((message) => ({
       role: message.role,
       content: message.content,
       questionType: message.questionType,
@@ -115,6 +143,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
   } catch (error) {
     console.error("Failed to continue AI interview", error);
-    return NextResponse.json({ error: "The interviewer could not respond. Your answer was saved; reload and try again." }, { status: 502 });
+    return NextResponse.json(
+      {
+        error: answerSaved
+          ? "Your answer was saved, but the interviewer could not respond. Continue the interview to try again."
+          : "Your answer could not be saved. Try submitting it again.",
+        answerSaved,
+      },
+      { status: 502 },
+    );
   }
 }

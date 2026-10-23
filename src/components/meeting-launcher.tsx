@@ -46,16 +46,19 @@ export function MeetingLauncher({
 
     setCreating(true);
     setError("");
-    const response = await fetch("/api/meetings", { method: "POST" });
-    const result = (await response.json()) as { code?: string; error?: string };
-    setCreating(false);
-
-    if (!response.ok || !result.code) {
-      setError(result.error ?? "The room could not be created.");
-      return;
+    try {
+      const response = await fetch("/api/meetings", { method: "POST" });
+      const result = (await response.json()) as { code?: string; error?: string };
+      if (!response.ok || !result.code) {
+        setError(result.error ?? "The room could not be created.");
+        return;
+      }
+      router.push(`/join/${result.code}`);
+    } catch {
+      setError("The room could not be created. Check your connection and try again.");
+    } finally {
+      setCreating(false);
     }
-
-    router.push(`/join/${result.code}`);
   }
 
   function joinMeeting(event: FormEvent<HTMLFormElement>) {
