@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { experienceLevels, interviewTracks, levelLabel, type ExperienceLevelValue, type InterviewModeValue, type InterviewTrackValue } from "@/lib/interviews";
+import { experienceLevels, interviewTracks, levelLabel, trackDefaultRole, type ExperienceLevelValue, type InterviewModeValue, type InterviewTrackValue } from "@/lib/interviews";
 import { cn } from "@/lib/utils";
 
 export function InterviewSetup() {
@@ -16,7 +16,7 @@ export function InterviewSetup() {
   const [interviewerType, setInterviewerType] = useState<InterviewModeValue>("AI");
   const [track, setTrack] = useState<InterviewTrackValue>("FULLSTACK");
   const [level, setLevel] = useState<ExperienceLevelValue>("ENTRY");
-  const [jobTitle, setJobTitle] = useState("Software Engineer");
+  const [jobTitle, setJobTitle] = useState<string>(() => trackDefaultRole("FULLSTACK"));
   const [resume, setResume] = useState<File | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
@@ -111,6 +111,10 @@ export function InterviewSetup() {
                   type="button"
                   aria-pressed={track === item.value}
                   onClick={() => {
+                    // Follow the track's role unless the user typed their own.
+                    if (jobTitle.trim() === "" || jobTitle === trackDefaultRole(track)) {
+                      setJobTitle(item.defaultRole);
+                    }
                     setTrack(item.value);
                     setError("");
                   }}

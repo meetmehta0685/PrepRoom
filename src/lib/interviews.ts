@@ -2,12 +2,12 @@ export const interviewTrackValues = ["FULLSTACK", "FRONTEND", "BACKEND", "DSA", 
 export const experienceLevelValues = ["ENTRY", "MID", "SENIOR"] as const;
 
 export const interviewTracks = [
-  { value: "FULLSTACK", label: "Full-stack", description: "APIs, data, React, and architecture" },
-  { value: "FRONTEND", label: "Frontend", description: "React, browser fundamentals, and UI systems" },
-  { value: "BACKEND", label: "Backend", description: "APIs, databases, concurrency, and reliability" },
-  { value: "DSA", label: "DSA", description: "Problem solving, complexity, and data structures" },
-  { value: "SYSTEM_DESIGN", label: "System design", description: "Scale, trade-offs, and distributed systems" },
-  { value: "BEHAVIORAL", label: "Behavioral", description: "Ownership, collaboration, and decision making" },
+  { value: "FULLSTACK", defaultRole: "Full-stack Engineer", label: "Full-stack", description: "APIs, data, React, and architecture" },
+  { value: "FRONTEND", defaultRole: "Frontend Engineer", label: "Frontend", description: "React, browser fundamentals, and UI systems" },
+  { value: "BACKEND", defaultRole: "Backend Engineer", label: "Backend", description: "APIs, databases, concurrency, and reliability" },
+  { value: "DSA", defaultRole: "Software Engineer", label: "DSA", description: "Problem solving, complexity, and data structures" },
+  { value: "SYSTEM_DESIGN", defaultRole: "Distributed Systems Engineer", label: "System design", description: "Scale, trade-offs, and distributed systems" },
+  { value: "BEHAVIORAL", defaultRole: "Software Engineer", label: "Behavioral", description: "Ownership, collaboration, and decision making" },
 ] as const;
 
 export const experienceLevels = [
@@ -72,6 +72,10 @@ export const codingQuestionBank: Record<Exclude<InterviewTrackValue, "BEHAVIORAL
   DSA: "Implement an `LRUCache` class with a capacity, `get(key)`, and `put(key, value)` in constant time. Example: capacity 2, `put(1, 1)`, `put(2, 2)`, `get(1)`, `put(3, 3)` must evict key 2. Explain time and space complexity.",
   SYSTEM_DESIGN: "Implement `findServer(ring, keyHash)`, where `ring` is a sorted array of `{ hash: number, server: string }`. Return the first server whose hash is at least `keyHash`, wrapping to index 0. Example: ring hashes `[10, 30, 50]` maps key hash 31 to 50 and key hash 70 to 10. Define the empty-ring behavior.",
 };
+
+export function trackDefaultRole(track: InterviewTrackValue) {
+  return interviewTracks.find((item) => item.value === track)?.defaultRole ?? "Software Engineer";
+}
 
 export function trackLabel(track: InterviewTrackValue) {
   return interviewTracks.find((item) => item.value === track)?.label ?? track;
